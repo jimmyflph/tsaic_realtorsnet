@@ -6,7 +6,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: white;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -14,6 +14,7 @@ body {
 
 .navbar {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-height:5%!important;height:50px!important;max-height: 5%!important;background: linear-gradient(135deg, #7492eb 0%, #8931e0 100%);
 }
 
 .navbar-brand {
@@ -36,8 +37,9 @@ body {
 }
 
 .chat-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #718cdc 0%, #7B35BF 100%);
+  /* background: linear-gradient(135deg, #e2e4ea 0%, #d0cbd5 100%); */
+  color: rgb(52, 51, 51);
   padding: 30px 20px;
   text-align: center;
 }

@@ -1,8 +1,6 @@
 const pg = require('pg');
- 
 
 let pool = null;
-
 
 function initDB() {
  
