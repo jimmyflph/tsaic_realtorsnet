@@ -1,18 +1,59 @@
 const pg = require('pg');
+ 
 
 let pool = null;
 
-function initDB(config) {
-  pool = new pg.Pool(config);
 
-  pool.on('error', (err) => {
+function initDB() {
+ 
+  dbpool = new pg.Pool({
+    user: 'neondb_owner',
+    host: 'ep-floral-bush-a1wec8q2-pooler.ap-southeast-1.aws.neon.tech',
+    database: 'neondb',
+    password: 'npg_6jAUilzMG1gp',
+    port: 5432,
+    ssl: { rejectUnauthorized: false },
+    //ssl: false // Disable SSL (note: Neon usually requires SSL)
+  });
+
+  dbpool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
   });
 
-  return pool;
+ // check the connection 
+
+   async function runQuery() {
+      try {
+        // Get a client from the pool
+        const client = await dbpool.connect();
+
+        // Example query
+        const res = await client.query('SELECT NOW()');
+        console.log('Server time from db:', res.rows[0]);
+        console.log('Server time from db:', res.rows[0]);
+
+        // Release client back to pool
+        client.release();
+
+      } catch (err) {
+        console.error('Query error:', err);
+      } finally {
+        // Close all pool connections when done
+        await dbpool.end();
+      }
+    }
+
+    runQuery();
+
+
+  pool = dbpool;
 }
 
+
+
 function getPool() {
+  console.log("get pool");
+  console.log(pool);
   if (!pool) {
     throw new Error('Database not initialized. Call initDB first.');
   }
@@ -33,6 +74,8 @@ async function getProspects() {
   const result = await pool.query(
     'SELECT id, name, email, phone, status FROM prospects ORDER BY id'
   );
+  console.log("get prospects");
+  console.log(result.rows);
   return result.rows;
 }
 
@@ -82,16 +125,19 @@ async function closeDB() {
 
 /**** 
  * 
-
- * const db = require('./db_2.js');
-db.initDB({
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME
-});
+ * 
+  const db = require('./db_2.js');
+   db.initDB({
+   user: process.env.DB_USER,
+   password: process.env.DB_PASSWORD,
+   host: process.env.DB_HOST,
+   port: process.env.DB_PORT,
+   database: process.env.DB_NAME
+  });
+*   
 */
+
+
 module.exports = {
   initDB,
   getPool,

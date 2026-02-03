@@ -3,10 +3,16 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const db = require('./db.js');
-const auth = require('./auth.js');
+const auth = require('./auth.js'); 
+const db2 = require('./db_2.js');
 
 const PORT = 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
+ 
+db2.initDB();
+db2.getPool();
+db2.getProspects();
+
 
 function getContentType(filePath) {
   const ext = path.extname(filePath).toLowerCase();

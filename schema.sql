@@ -20,13 +20,13 @@ CREATE TABLE IF NOT EXISTS prospects (
 
 -- Insert demo users
 INSERT INTO users (username, password, role) VALUES
-  ('user1', 'pass123', 'buyer'),
-  ('user2', 'pass123', 'realtor')
+  ('buyer1', 'pass123', 'buyer'),
+  ('realtor2', 'pass123', 'realtor')
 ON CONFLICT (username) DO NOTHING;
 
 -- Insert demo prospects
 INSERT INTO prospects (name, email, phone, status) VALUES
-  ('John Doe', 'john@example.com', '555-0101', 'Active'),
-  ('Jane Smith', 'jane@example.com', '555-0102', 'Pending'),
-  ('Bob Johnson', 'bob@example.com', '555-0103', 'Active')
+  ('John Doe db', 'john@example.com', '555-0101', 'Active'),
+  ('Jane Smith db', 'jane@example.com', '555-0102', 'Pending'),
+  ('Bob Johnson db', 'bob@example.com', '555-0103', 'Active')
 ON CONFLICT (email) DO NOTHING;
