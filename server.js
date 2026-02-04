@@ -5,8 +5,9 @@ const url = require('url');
 const db = require('./db.js');
 const auth = require('./auth.js'); 
 const db2 = require('./db_2.js');
+// const { use } = require('react');
 
-const PORT = 3000;
+const PORT = 3003;
 const PUBLIC_DIR = path.join(__dirname, 'public');
  
 db2.initDB();
@@ -44,12 +45,16 @@ async function handleRequest(req, res) {
 
   if (pathname === '/api/signup' && req.method === 'POST') {
     // this is a buyer signup only
+    console.log("signup request received"); 
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
+
         const { username, password, role } = JSON.parse(body);
         role = "buyer";
+
+        console.log(username, password, role);
         if (!username || !password) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Username and password are required' }));
@@ -80,15 +85,18 @@ async function handleRequest(req, res) {
   if (pathname === '/api/login' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
-    console.log("login body:", body);
+    console.log("login body 2:", body);
     req.on('end', async () => {
       try {
         const { username, password } = JSON.parse(body);
-            console.log("login body:", user);
+        console.log("login body:", body);
         const user = await db2.getUserByUsername(username);
-console.log("login user:", user);
-   console.log("login user:", (user === null) );
-   
+
+        console.log("login user:", user);
+        console.log("login user null:", (user === null) );
+        console.log("login user null 2:", (user == null) );
+        console.log("login user null 3:", (user == false) );
+
         if (user && user.password === password) {
           const token = auth.generateToken(user);
           const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
@@ -166,8 +174,41 @@ console.log("login user:", user);
     return;
   }
 
-  if (pathname === '/realtor/login' && req.method === 'GET') {
+  if (pathname === '/api/realtor-login' && req.method === 'GET') {
       // loging realtor
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    console.log("login body 2:", body);
+    req.on('end', async () => {
+      try {
+        const { username, password } = JSON.parse(body);
+        console.log("login body:", body);
+        const user = await db2.getUserByUsername(username);
+
+        console.log("login user realtor:", user);
+        console.log("login user null:", (user === null) );
+        console.log("login user null 2:", (user == null) );
+        console.log("login user null 3:", (user == false) );
+
+        if (user && user.password === password) {
+          const token = auth.generateToken(user);
+          const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
+          res.writeHead(200, { 
+            'Content-Type': 'application/json',
+            'Set-Cookie': `authToken=${token}; ${cookieOptions}`
+          });
+          res.end(JSON.stringify({ token, role: user.role, message: 'Login successful' }));
+        } else {
+          console.log("Invalid credentials for user:", username);
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid credentials' }));
+        }
+      } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+    });
+    return;
   }
 console.log("pathname:", pathname);
 console.log("pathname:", pathname);

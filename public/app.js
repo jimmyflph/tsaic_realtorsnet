@@ -68,7 +68,55 @@ async function login(username, password) {
   }
 }
 
- 
+async function signup(username, fullName, email, password, age, address, city) {
+  try {
+    const response = await fetch(`${API_URL}/api/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, fullName, email, password, age, address, city })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setToken(data.token);
+      if (data.role === 'realtor') {
+        window.location.href = '/realtor-home.html';
+      } else if (data.role === 'client') {
+        window.location.href = '/client-home.html';
+      }
+    } else {
+      return data.error || 'Signup failed';
+    }
+  } catch (error) {
+    return 'Server error';
+  }
+}
+
+ async function login_realtor(username, password) {
+  try {
+    const response = await fetch(`${API_URL}/api/realtor-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setToken(data.token);
+      if (data.role === 'realtor') {
+        window.location.href = '/realtor-home.html';
+      } else if (data.role === 'buyer') {
+        window.location.href = '/client-home.html';
+      }
+    } else {
+      return data.error || 'Login failed';
+    }
+  } catch (error) {
+    return 'Server error';
+  }
+}
 
 
 async function loadProspects() {
@@ -129,14 +177,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (signupForm) {
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
+      const username = document.getElementById('regUsername').value;
+      const fullName = document.getElementById('regFullName').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const age = document.getElementById('regAge').value;
+      const address = document.getElementById('regAddress').value;
+      const city = document.getElementById('regCity').value;
       const errorMsg = document.getElementById('errorMsg');
+      const successMsg = document.getElementById('successMsg');
 
-      const error = await login(username, password);
+      errorMsg.classList.add('d-none');
+      successMsg.classList.add('d-none');
+
+      const error = await signup(username, fullName, email, password, age, address, city);
       if (error) {
         errorMsg.textContent = error;
         errorMsg.classList.remove('d-none');
+      } else {
+        successMsg.textContent = 'Signup successful! Redirecting...';
+        successMsg.classList.remove('d-none');
       }
     });
   }
