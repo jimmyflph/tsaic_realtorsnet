@@ -52,14 +52,12 @@ async function login(username, password) {
     });
 
     const data = await response.json();
+    console.log('login response', response.status, data);
 
     if (response.ok) {
       setToken(data.token);
-      if (data.role === 'realtor') {
-        window.location.href = '/realtor-home.html';
-      } else if (data.role === 'buyer') {
-        window.location.href = '/client-home.html';
-      }
+      const target = data.role === 'realtor' ? '/realtor-home.html' : '/client-home.html';
+      window.location.href = target;
     } else {
       return data.error || 'Login failed';
     }
@@ -77,14 +75,12 @@ async function signup(username, fullName, email, password, age, address, city) {
     });
 
     const data = await response.json();
+    console.log('signup response', response.status, data);
 
     if (response.ok) {
       setToken(data.token);
-      if (data.role === 'realtor') {
-        window.location.href = '/realtor-home.html';
-      } else if (data.role === 'client') {
-        window.location.href = '/client-home.html';
-      }
+      const target = data.role === 'realtor' ? '/realtor-home.html' : '/client-home.html';
+      window.location.href = target;
     } else {
       return data.error || 'Signup failed';
     }
@@ -93,7 +89,7 @@ async function signup(username, fullName, email, password, age, address, city) {
   }
 }
 
- async function login_realtor(username, password) {
+async function login_realtor(username, password) {
   try {
     const response = await fetch(`${API_URL}/api/realtor-login`, {
       method: 'POST',
@@ -102,14 +98,12 @@ async function signup(username, fullName, email, password, age, address, city) {
     });
 
     const data = await response.json();
+    console.log('login_realtor response', response.status, data);
 
     if (response.ok) {
       setToken(data.token);
-      if (data.role === 'realtor') {
-        window.location.href = '/realtor-home.html';
-      } else if (data.role === 'buyer') {
-        window.location.href = '/client-home.html';
-      }
+      const target = data.role === 'realtor' ? '/realtor-home.html' : '/client-home.html';
+      window.location.href = target;
     } else {
       return data.error || 'Login failed';
     }

@@ -7,7 +7,7 @@ const auth = require('./auth.js');
 const db2 = require('./db_2.js');
 // const { use } = require('react');
 
-const PORT = 3003;
+const PORT = 3004;
 const PUBLIC_DIR = path.join(__dirname, 'public');
  
 db2.initDB();
@@ -50,8 +50,8 @@ async function handleRequest(req, res) {
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
-
-        const { username, password, role } = JSON.parse(body);
+       console.log("signup body:", body);
+        const { username, password, email, city } = JSON.parse(body);
         role = "buyer";
 
         console.log(username, password, role);
@@ -61,7 +61,7 @@ async function handleRequest(req, res) {
           return;
         }
 
-        const newUser = await db2.createUser(username, password, role || 'client');
+        const newUser = await db2.createUser(username, password, role || 'buyer');
         const token = auth.generateToken(newUser);
         const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
         res.writeHead(201, { 
@@ -174,7 +174,7 @@ async function handleRequest(req, res) {
     return;
   }
 
-  if (pathname === '/api/realtor-login' && req.method === 'GET') {
+  if (pathname === '/api/realtor-login' && req.method === 'POST') {
       // loging realtor
     let body = '';
     req.on('data', chunk => body += chunk);

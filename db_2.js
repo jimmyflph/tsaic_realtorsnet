@@ -36,8 +36,9 @@ function initDB() {
       } catch (err) {
         console.error('Query error:', err);
       } finally {
-        // Close all pool connections when done
-        await dbpool.end();
+        // Do not call dbpool.end() here — keep the pool open for app lifetime.
+        // Pool shutdown should be performed explicitly via `closeDB()` when the
+        // application is terminating.
       }
     }
 
@@ -69,6 +70,8 @@ async function getUserByUsername(username) {
 
 async function createUser(username, password, role = 'realtor') {
   const pool = getPool();
+  console.log("create user in db_2:", username, password, role);
+  console.log("create user in db_2:", username, password, role);
   try {
     const result = await pool.query(
       'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role',
@@ -76,6 +79,7 @@ async function createUser(username, password, role = 'realtor') {
     );
     return result.rows[0];
   } catch (error) {
+    console.error("Error creating user:", error);
     if (error.code === '23505') {
       throw new Error('Username already exists');
     }
