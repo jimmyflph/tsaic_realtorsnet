@@ -42,18 +42,56 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (pathname === '/api/signup' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const { username, password, role } = JSON.parse(body);
+        
+        if (!username || !password) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Username and password are required' }));
+          return;
+        }
+
+        const newUser = await db2.createUser(username, password, role || 'client');
+        const token = auth.generateToken(newUser);
+        const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
+        res.writeHead(201, { 
+          'Content-Type': 'application/json',
+          'Set-Cookie': `authToken=${token}; ${cookieOptions}`
+        });
+        res.end(JSON.stringify({ token, role: newUser.role, message: 'Signup successful' }));
+      } catch (error) {
+        if (error.message === 'Username already exists') {
+          res.writeHead(409, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Username already exists' }));
+        } else {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Server error' }));
+        }
+      }
+    });
+    return;
+  }
+
   if (pathname === '/api/login' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
         const { username, password } = JSON.parse(body);
-        const user = await db.getUserByUsername(username);
+        const user = await db2.getUserByUsername(username);
 
         if (user && user.password === password) {
           const token = auth.generateToken(user);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ token, role: user.role }));
+          const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
+          res.writeHead(200, { 
+            'Content-Type': 'application/json',
+            'Set-Cookie': `authToken=${token}; ${cookieOptions}`
+          });
+          res.end(JSON.stringify({ token, role: user.role, message: 'Login successful' }));
         } else {
           res.writeHead(401, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid credentials' }));
@@ -63,6 +101,16 @@ async function handleRequest(req, res) {
         res.end(JSON.stringify({ error: 'Server error' }));
       }
     });
+    return;
+  }
+
+  if (pathname === '/api/logout' && req.method === 'POST') {
+    const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=0';
+    res.writeHead(200, { 
+      'Content-Type': 'application/json',
+      'Set-Cookie': `authToken=; ${cookieOptions}`
+    });
+    res.end(JSON.stringify({ message: 'Logout successful' }));
     return;
   }
 

@@ -67,6 +67,22 @@ async function getUserByUsername(username) {
   return result.rows[0] || null;
 }
 
+async function createUser(username, password, role = 'client') {
+  const pool = getPool();
+  try {
+    const result = await pool.query(
+      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role',
+      [username, password, role]
+    );
+    return result.rows[0];
+  } catch (error) {
+    if (error.code === '23505') {
+      throw new Error('Username already exists');
+    }
+    throw error;
+  }
+}
+
 async function getProspects() {
   const pool = getPool();
   const result = await pool.query(
@@ -140,6 +156,7 @@ module.exports = {
   initDB,
   getPool,
   getUserByUsername,
+  createUser,
   getProspects,
   getProspectById,
   createProspect,
