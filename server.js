@@ -80,11 +80,13 @@ async function handleRequest(req, res) {
   if (pathname === '/api/login' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
+    console.log("login body:", body);
     req.on('end', async () => {
       try {
         const { username, password } = JSON.parse(body);
+            console.log("login body:", user);
         const user = await db2.getUserByUsername(username);
-
+console.log("login user:", user);
         if (user && user.password === password) {
           const token = auth.generateToken(user);
           const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
@@ -94,6 +96,7 @@ async function handleRequest(req, res) {
           });
           res.end(JSON.stringify({ token, role: user.role, message: 'Login successful' }));
         } else {
+          console.log("Invalid credentials for user:", username);
           res.writeHead(401, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid credentials' }));
         }
@@ -161,6 +164,11 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (pathname === '/realtor/login' && req.method === 'GET') {
+      // loging realtor
+  }
+console.log("pathname:", pathname);
+console.log("pathname:", pathname);
   let filePath = pathname === '/' ? '/index.html' : pathname;
   filePath = path.join(PUBLIC_DIR, filePath);
 

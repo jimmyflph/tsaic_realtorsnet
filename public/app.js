@@ -68,6 +68,9 @@ async function login(username, password) {
   }
 }
 
+ 
+
+
 async function loadProspects() {
   const tableBody = document.getElementById('prospectsTable');
   if (!tableBody) return;
@@ -121,6 +124,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  const signupForm = document.getElementById('signupForm');
+  if (signupForm) {
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorMsg = document.getElementById('errorMsg');
+
+      const error = await login(username, password);
+      if (error) {
+        errorMsg.textContent = error;
+        errorMsg.classList.remove('d-none');
+      }
+    });
+  }
+
+
 
   const sendBtn = document.getElementById('sendBtn');
   const chatInput = document.getElementById('chatInput');
