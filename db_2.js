@@ -67,7 +67,7 @@ async function getUserByUsername(username) {
   return result.rows[0] || null;
 }
 
-async function createUser(username, password, role = 'client') {
+async function createUser(username, password, role = 'realtor') {
   const pool = getPool();
   try {
     const result = await pool.query(

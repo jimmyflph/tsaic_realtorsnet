@@ -43,12 +43,13 @@ async function handleRequest(req, res) {
   }
 
   if (pathname === '/api/signup' && req.method === 'POST') {
+    // this is a buyer signup only
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
         const { username, password, role } = JSON.parse(body);
-        
+        role = "buyer";
         if (!username || !password) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Username and password are required' }));
