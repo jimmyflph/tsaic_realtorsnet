@@ -87,6 +87,8 @@ async function handleRequest(req, res) {
             console.log("login body:", user);
         const user = await db2.getUserByUsername(username);
 console.log("login user:", user);
+   console.log("login user:", (user === null) );
+   
         if (user && user.password === password) {
           const token = auth.generateToken(user);
           const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
