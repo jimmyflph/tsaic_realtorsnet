@@ -56,7 +56,7 @@ async function login(username, password) {
 
     if (response.ok) {
       setToken(data.token);
-      const target = data.role === 'realtor' ? '/realtor-home.html' : '/client-home.html';
+      const target = data.role === 'realtor' ? '/realtor-home' : '/client-home';
       window.location.href = target;
     } else {
       return data.error || 'Login failed';
@@ -79,7 +79,7 @@ async function signup(username, fullName, email, password, age, address, city) {
 
     if (response.ok) {
       setToken(data.token);
-      const target = data.role === 'realtor' ? '/realtor-home.html' : '/client-home.html';
+      const target = data.role === 'realtor' ? '/realtor-home' : '/client-home';
       window.location.href = target;
     } else {
       return data.error || 'Signup failed';
@@ -102,7 +102,7 @@ async function login_realtor(username, password) {
 
     if (response.ok) {
       setToken(data.token);
-      const target = data.role === 'realtor' ? '/realtor-home.html' : '/client-home.html';
+      const target = data.role === 'realtor' ? '/realtor-home' : '/client-home';
       window.location.href = target;
     } else {
       return data.error || 'Login failed';
@@ -129,23 +129,25 @@ async function loadProspects() {
       return;
     }
 
-    const prospects = await response.json();
+    const data = await response.json();
+    const prospects = data.prospects || data;
 
-    if (prospects.length === 0) {
+    if (!prospects || prospects.length === 0) {
       tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No prospects found</td></tr>';
       return;
     }
 
     tableBody.innerHTML = prospects.map(p => `
       <tr>
-        <td>${p.id}</td>
-        <td>${p.name}</td>
-        <td>${p.email}</td>
-        <td>${p.phone}</td>
-        <td><span class="badge bg-${p.status === 'Active' ? 'success' : 'warning'}">${p.status}</span></td>
+        <td>${p.prospect_id || p.id || '-'}</td>
+        <td>${p.fullname || p.name || '-'}</td>
+        <td>${p.email || '-'}</td>
+        <td>${p.phone || '-'}</td>
+        <td><span class="badge bg-${p.status === 'Active' ? 'success' : 'warning'}">${p.status || 'Active'}</span></td>
       </tr>
     `).join('');
   } catch (error) {
+    console.error('Error loading prospects:', error);
     tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading prospects</td></tr>';
   }
 }
@@ -317,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (window.location.pathname === '/realtor-home') {
+  if (window.location.pathname === '/realtor-home' || window.location.pathname.includes('realtor-home')) {
     loadProspects();
   }
 

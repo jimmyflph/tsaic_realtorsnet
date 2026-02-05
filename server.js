@@ -8,12 +8,12 @@ const auth = require('./auth.js');
 const db2 = require('./db_2.js');
 // const { use } = require('react');
 
-const PORT = 3007;
+const PORT = 3003;
 const PUBLIC_DIR = path.join(__dirname, 'public');
  
 db2.initDB();
 db2.getPool();
-db2.getProspects();
+// db2.getProspects();
 
 
 function getContentType(filePath) {
@@ -94,10 +94,6 @@ async function handleRequest(req, res) {
         const user = await db2.getUserByUsername(username);
 
         console.log("login user:", user);
-        console.log("login user null:", (user === null) );
-        console.log("login user null 2:", (user == null) );
-        console.log("login user null 3:", (user == false) );
-
         if (user && await bcrypt.compare(password, user.password)) {
           const token = auth.generateToken(user);
           const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
@@ -141,11 +137,44 @@ async function handleRequest(req, res) {
 
     let body = '';
     req.on('data', chunk => body += chunk);
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
-        JSON.parse(body);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'Server error' }));
+        const { message } = JSON.parse(body);
+        
+        if (!message) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Message is required' }));
+          return;
+        }
+
+        // Query the external RAG API
+        const encodedMessage = encodeURIComponent(message);
+        const apiUrl = `https://realtorsnet-rag.onrender.com/api?qstn=${encodedMessage}`;
+        
+        try {
+          const https = require('https');
+          https.get(apiUrl, (response) => {
+            let data = '';
+            response.on('data', chunk => data += chunk);
+            response.on('end', () => {
+              try {
+                const parsedData = JSON.parse(data);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: parsedData.message || parsedData.answer || data }));
+              } catch (parseError) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: data || 'No response from API' }));
+              }
+            });
+          }).on('error', (error) => {
+            console.error('API call error:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: 'Error querying API: ' + error.message }));
+          });
+        } catch (apiError) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ message: 'Server error' }));
+        }
       } catch (error) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Invalid request' }));
@@ -165,9 +194,193 @@ async function handleRequest(req, res) {
     }
 
     try {
-      const prospects = await db.getProspects();
+      const realtorId = user.id;
+      const prospects = await db2.getProspects(realtorId, 1, 10);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(prospects));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server error' }));
+    }
+    return;
+  }
+
+  // Paginated prospects endpoint
+  if (pathname === '/api/view-prospects' && req.method === 'GET') {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = auth.verifyToken(token);
+
+    if (!user) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
+
+    try {
+      const query = parsedUrl.query;
+      const page = parseInt(query.page) || 1;
+      const maxItems = parseInt(query.maxItems) || 10;
+
+      if (page < 1 || maxItems < 1) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid page or maxItems' }));
+        return;
+      }
+
+      const realtorId = user.id;
+      const result = await db2.getProspects(realtorId, page, maxItems);
+      const prospects = result.prospects;
+      const totalRecords = result.totalRecords;
+      
+      const totalPages = Math.ceil(totalRecords / maxItems);
+ console.log('###paginated prospects api### ');
+ console.log('###paginated prospects api### ');
+ console.log('###paginated prospects api### ');
+  console.log(prospects);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        prospects: prospects,
+        pagination: {
+          page,
+          maxItems,
+          totalRecords,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1
+        }
+      }));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server error' }));
+    }
+    return;
+  }
+
+    // SEARCH for buyers by name, email, or city
+    if (pathname === '/api/search-buyers' && req.method === 'GET') {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      const user = auth.verifyToken(token);
+
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+
+      try {
+        const searchQuery = parsedUrl.query.q;
+
+        if (!searchQuery) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Search query is required' }));
+          return;
+        }
+
+        const buyers = await db2.searchBuyers(searchQuery);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(buyers));
+      } catch (error) {
+        console.error('Error searching buyers:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+      return;
+    }
+
+  // GET individual prospect details
+  const prospectMatch = pathname.match(/^\/api\/prospect\/(\d+)$/);
+  if (prospectMatch && req.method === 'GET') {
+    const prospectId = parseInt(prospectMatch[1]);
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = auth.verifyToken(token);
+
+    if (!user) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
+
+    try {
+      const prospect = await db2.getProspectById(prospectId);
+      if (!prospect) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Prospect not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(prospect));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server error' }));
+    }
+    return;
+  }
+
+  // CREATE new prospect
+  if (pathname === '/api/prospect' && req.method === 'POST') {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = auth.verifyToken(token);
+
+    if (!user) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
+
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const { userId, fullname, email, phone, status, notes } = JSON.parse(body);
+
+        // If userId is provided, create prospect linked to existing buyer
+        if (userId) {
+          const prospect = await db2.linkUserProspect(userId, notes || '', status || 'Active', user.id);
+          res.writeHead(201, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(prospect));
+          return;
+        }
+
+        if (!fullname || !email) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Full name and email are required' }));
+          return;
+        }
+
+        const prospect = await db2.createProspect(fullname, email, phone, status, notes, user.id);
+        res.writeHead(201, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(prospect));
+      } catch (error) {
+        console.error('Error creating prospect:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+    });
+    return;
+  }
+
+  // DELETE individual prospect
+  if (prospectMatch && req.method === 'DELETE') {
+    const prospectId = parseInt(prospectMatch[1]);
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = auth.verifyToken(token);
+
+    if (!user) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
+
+    try {
+      const result = await db2.deleteProspect(prospectId);
+      if (!result) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Prospect not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ message: 'Prospect deleted successfully', id: prospectId }));
     } catch (error) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Server error' }));
@@ -182,6 +395,8 @@ async function handleRequest(req, res) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(realties));
     } catch (error) {
+      console.log("error getting realty " , error);
+      console.log(error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Server error' }));
     }
@@ -355,6 +570,23 @@ async function handleRequest(req, res) {
   if (propertyViewMatch) {
     // Serve property-view.html for any /property-view/:id route
     const filePath = path.join(PUBLIC_DIR, 'property-view.html');
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('<h1>404 Not Found</h1>');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+
+  // Match /prospect-view/:id pattern
+  const prospectViewMatch = pathname.match(/^\/prospect-view\/(\d+)$/);
+  if (prospectViewMatch) {
+    // Serve prospect-view.html for any /prospect-view/:id route
+    const filePath = path.join(PUBLIC_DIR, 'prospect-view.html');
     fs.readFile(filePath, (err, content) => {
       if (err) {
         res.writeHead(404, { 'Content-Type': 'text/html' });

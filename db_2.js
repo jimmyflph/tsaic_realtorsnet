@@ -1,148 +1,144 @@
-const pg = require('pg');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
 let pool = null;
 
 function initDB() {
- 
-  dbpool = new pg.Pool({
+  if (pool) return;
+
+  pool = new Pool({
     user: 'neondb_owner',
     host: 'ep-floral-bush-a1wec8q2-pooler.ap-southeast-1.aws.neon.tech',
     database: 'neondb',
     password: 'npg_6jAUilzMG1gp',
     port: 5432,
-    ssl: { rejectUnauthorized: false },
-    //ssl: false // Disable SSL (note: Neon usually requires SSL)
+    ssl: { rejectUnauthorized: false }
   });
 
-  dbpool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
-  });
-
- // check the connection 
-
-   async function runQuery() {
-      try {
-        // Get a client from the pool
-        const client = await dbpool.connect();
-
-        // Example query
-        const res = await client.query('SELECT NOW()');
-        console.log('Server time from db:', res.rows[0]);
-        console.log('Server time from db:', res.rows[0]);
-
-        // Release client back to pool
-        client.release();
-
-      } catch (err) {
-        console.error('Query error:', err);
-      } finally {
-        // Do not call dbpool.end() here — keep the pool open for app lifetime.
-        // Pool shutdown should be performed explicitly via `closeDB()` when the
-        // application is terminating.
-      }
-    }
-
-    runQuery();
-
-
-  pool = dbpool;
+  pool.on('error', (err) => console.error('Unexpected error on idle client', err));
 }
 
-
-
 function getPool() {
-  console.log("get pool");
-  console.log(pool);
-  if (!pool) {
-    throw new Error('Database not initialized. Call initDB first.');
-  }
+  if (!pool) throw new Error('Database not initialized. Call initDB first.');
   return pool;
 }
 
 async function getUserByUsername(username) {
-  const pool = getPool();
-  const result = await pool.query(
-    'SELECT id, username, password, role FROM users WHERE username = $1',
-    [username]
-  );
-  return result.rows[0] || null;
+  try {
+    console.log('Getting user by username:', username);
+    console.log('Getting user by username:', username);
+    console.log('Getting user by username:', username);
+    const p = getPool();
+    const res = await p.query('SELECT id, username, password, role, fullname, email, address FROM users WHERE username = $1', [username]);
+    return res.rows[0] || null;
+  } catch (err) {
+    console.error('Error in getUserByUsername:', err);
+    throw err;
+  }
+  const p = getPool();
+  const res = await p.query('SELECT id, username, password, role, fullname, email, phone, address FROM users WHERE username = $1', [username]);
+  return res.rows[0] || null;
 }
 
 async function createUser(username, password, role = 'realtor') {
-  const pool = getPool();
-  console.log("create user in db_2:", username, role);
-  try {
-    // Hash password with bcrypt (10 salt rounds)
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role',
-      [username, hashedPassword, role]
-    );
-    return result.rows[0];
-  } catch (error) {
-    console.error("Error creating user:", error);
-    if (error.code === '23505') {
-      throw new Error('Username already exists');
-    }
-    throw error;
-  }
+  const p = getPool();
+  const hashed = await bcrypt.hash(password, 10);
+  const res = await p.query('INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role', [username, hashed, role]);
+  return res.rows[0];
 }
 
-async function getProspects() {
-  const pool = getPool();
-  const result = await pool.query(
-    'SELECT id, name, email, phone, status FROM prospects ORDER BY id'
+async function searchBuyers(searchQuery) {
+  const p = getPool();
+  const q = `%${searchQuery}%`;
+  const res = await p.query(
+    `SELECT id, fullname, email, address 
+     FROM users
+     WHERE role = 'buyer' AND (
+       LOWER(fullname) LIKE LOWER($1) OR
+       LOWER(email) LIKE LOWER($1) OR
+       LOWER(address) LIKE LOWER($1)
+     )
+     LIMIT 50`,
+    [q]
   );
-  console.log("get prospects");
-  console.log(result.rows);
-  return result.rows;
+  return res.rows || [];
 }
 
-async function getProspectById(id) {
-  const pool = getPool();
-  const result = await pool.query(
-    'SELECT id, name, email, phone, status FROM prospects WHERE id = $1',
-    [id]
-  );
-  return result.rows[0] || null;
+async function createProspect(fullname, email = null, status = 'Active', notes = '', realtor_id = 1) {
+  const p = getPool();
+
+  // // Create user record for buyer
+  // // const userRes = await p.query(
+  // //   'INSERT INTO users (username, password, fullname, email, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, fullname, email',
+  // //   [email, 'prospect_password', fullname, email, 'buyer']
+  // // );
+  // const userId = userRes.rows[0].id;
+
+  // const prospectRes = await p.query(
+  //   'INSERT INTO prospects (userid, realtor, status, notes) VALUES ($1, $2, $3, $4) RETURNING id, userid, realtor, status, notes, created_at, updated_at',
+  //   [userId, realtor_id, status, notes]
+  // );
+
+  // const prospect = prospectRes.rows[0];
+  // return {
+  //   prospect_id: prospect.id,
+  //   id: prospect.id,
+  //   fullname: userRes.rows[0].fullname,
+  //   email: userRes.rows[0].email,
+  //   status: prospect.status,
+  //   notes: prospect.notes,
+  //   userid: prospect.userid,
+  //   realtor: prospect.realtor,
+  //   prospect_created_at: prospect.created_at,
+  //   prospect_updated_at: prospect.updated_at
+  // };
 }
 
-async function createProspect(name, email, phone, status = 'Active') {
-  const pool = getPool();
-  const result = await pool.query(
-    'INSERT INTO prospects (name, email, phone, status) VALUES ($1, $2, $3, $4) RETURNING *',
-    [name, email, phone, status]
+async function linkUserProspect(userId, notes = '', status = 'Active', realtorId = 1) {
+  const p = getPool();
+
+  const userRes = await p.query('SELECT id, fullname, email, address FROM users WHERE id = $1', [userId]);
+  if (!userRes.rows[0]) throw new Error('User not found');
+  const user = userRes.rows[0];
+
+  const prospectRes = await p.query(
+    'INSERT INTO prospects (userid, realtor, status, notes) VALUES ($1, $2, $3, $4) RETURNING id, userid, realtor, status, notes, created_at, updated_at',
+    [userId, realtorId, status, notes]
   );
-  return result.rows[0];
+
+  const prospect = prospectRes.rows[0];
+  return {
+    prospect_id: prospect.id,
+    id: prospect.id,
+    fullname: user.fullname,
+    email: user.email,
+    status: prospect.status,
+    notes: prospect.notes,
+    userid: prospect.userid,
+    realtor: prospect.realtor,
+    prospect_created_at: prospect.created_at,
+    prospect_updated_at: prospect.updated_at
+  };
 }
 
-async function updateProspect(id, name, email, phone, status) {
-  const pool = getPool();
-  const result = await pool.query(
-    'UPDATE prospects SET name = $1, email = $2, phone = $3, status = $4 WHERE id = $5 RETURNING *',
-    [name, email, phone, status, id]
-  );
-  return result.rows[0] || null;
-}
+async function getProspects(realtorId = 1, page = 1, maxItems = 10) {
+  const p = getPool();
+  const offset = (page - 1) * maxItems;
+  const countRes = await p.query('SELECT COUNT(*) as total FROM prospects WHERE realtor = $1', [realtorId]);
+  const totalRecords = parseInt(countRes.rows[0].total || '0', 10);
 
-async function deleteProspect(id) {
-  const pool = getPool();
-  const result = await pool.query(
-    'DELETE FROM prospects WHERE id = $1 RETURNING id',
-    [id]
+  const res = await p.query(
+    `SELECT p.id AS prospect_id, p.status, p.created_at AS prospect_created_at, p.updated_at AS prospect_updated_at, p.notes, p.realtor,
+      u.id AS user_id, u.username, u.fullname, u.email, u.role, u.created_at AS user_created_at
+     FROM prospects p
+     INNER JOIN users u ON p.userid = u.id
+     WHERE p.realtor = $1
+     ORDER BY p.id
+     LIMIT $2 OFFSET $3`,
+    [realtorId, maxItems, offset]
   );
-  return result.rows[0] || null;
-}
 
-// REALTY CRUD FUNCTIONS
-async function createRealty(title, description, isrental, price, amenities, address) {
-  const pool = getPool();
-  const result = await pool.query(
-    'INSERT INTO realty (title, description, isrental, price, amenities, address) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [title, description, isrental, price, amenities, address]
-  );
-  return result.rows[0];
+  return { prospects: res.rows, totalRecords };
 }
 
 async function getRealties() {
@@ -188,22 +184,25 @@ async function getRealtyById(id) {
   return result.rows[0] || null;
 }
 
-async function updateRealty(id, title, description, isrental, price, amenities, address) {
-  const pool = getPool();
-  const result = await pool.query(
-    'UPDATE realty SET title = $1, description = $2, isrental = $3, price = $4, amenities = $5, address = $6 WHERE id = $7 RETURNING *',
-    [title, description, isrental, price, amenities, address, id]
-  );
-  return result.rows[0] || null;
-}
 
-async function deleteRealty(id) {
-  const pool = getPool();
-  const result = await pool.query(
-    'DELETE FROM realty WHERE id = $1 RETURNING id',
+
+async function getProspectById(id) {
+  const p = getPool();
+  const res = await p.query(
+    `SELECT p.id AS prospect_id, p.status, p.created_at AS prospect_created_at, p.updated_at AS prospect_updated_at, p.notes, p.realtor,
+      u.id AS user_id, u.username, u.fullname, u.email, u.role, u.created_at AS user_created_at
+     FROM prospects p
+     INNER JOIN users u ON p.userid = u.id
+     WHERE p.id = $1`,
     [id]
   );
-  return result.rows[0] || null;
+  return res.rows[0] || null;
+}
+
+async function deleteProspect(id) {
+  const p = getPool();
+  const res = await p.query('DELETE FROM prospects WHERE id = $1 RETURNING id', [id]);
+  return res.rows[0] || null;
 }
 
 async function closeDB() {
@@ -213,36 +212,17 @@ async function closeDB() {
   }
 }
 
-
-/**** 
- * 
- * 
-  const db = require('./db_2.js');
-   db.initDB({
-   user: process.env.DB_USER,
-   password: process.env.DB_PASSWORD,
-   host: process.env.DB_HOST,
-   port: process.env.DB_PORT,
-   database: process.env.DB_NAME
-  });
-*   
-*/
-
-
 module.exports = {
   initDB,
   getPool,
   getUserByUsername,
   createUser,
-  getProspects,
-  getProspectById,
+  searchBuyers,
   createProspect,
-  updateProspect,
-  deleteProspect,
-  createRealty,
+  linkUserProspect,
+  getProspects,
   getRealties,
   getRealtyById,
-  updateRealty,
-  deleteRealty,
+  deleteProspect,
   closeDB
 };

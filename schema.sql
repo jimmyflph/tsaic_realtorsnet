@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
+  fullname VARCHAR(255),
+  email VARCHAR(255),
   role VARCHAR(50) NOT NULL DEFAULT 'buyer',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -19,9 +21,9 @@ CREATE TABLE IF NOT EXISTS prospects (
 );
 
 -- Insert demo users
-INSERT INTO users (username, password, role) VALUES
-  ('buyer1', 'pass123', 'buyer'),
-  ('realtor2', 'pass123', 'realtor')
+INSERT INTO users (username, password, role, fullname, email) VALUES
+  ('buyer1', 'pass123', 'buyer', 'John Buyer', 'john.buyer@example.com'),
+  ('realtor2', 'pass123', 'realtor', 'Sarah Johnson', 'sarah.johnson@realty.com')
 ON CONFLICT (username) DO NOTHING;
 
 -- Insert demo prospects
