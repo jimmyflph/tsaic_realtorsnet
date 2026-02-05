@@ -1,4 +1,5 @@
 const pg = require('pg');
+const bcrypt = require('bcryptjs');
 
 let pool = null;
 
@@ -70,12 +71,13 @@ async function getUserByUsername(username) {
 
 async function createUser(username, password, role = 'realtor') {
   const pool = getPool();
-  console.log("create user in db_2:", username, password, role);
-  console.log("create user in db_2:", username, password, role);
+  console.log("create user in db_2:", username, role);
   try {
+    // Hash password with bcrypt (10 salt rounds)
+    const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
       'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role',
-      [username, password, role]
+      [username, hashedPassword, role]
     );
     return result.rows[0];
   } catch (error) {
@@ -133,6 +135,51 @@ async function deleteProspect(id) {
   return result.rows[0] || null;
 }
 
+// REALTY CRUD FUNCTIONS
+async function createRealty(title, description, isrental, price, amenities, address) {
+  const pool = getPool();
+  const result = await pool.query(
+    'INSERT INTO realty (title, description, isrental, price, amenities, address) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [title, description, isrental, price, amenities, address]
+  );
+  return result.rows[0];
+}
+
+async function getRealties() {
+  const pool = getPool();
+  const result = await pool.query(
+    'SELECT id, title, description, isrental, price, amenities, address, created_at FROM realty ORDER BY created_at DESC'
+  );
+  return result.rows;
+}
+
+async function getRealtyById(id) {
+  const pool = getPool();
+  const result = await pool.query(
+    'SELECT id, title, description, isrental, price, amenities, address, created_at FROM realty WHERE id = $1',
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
+async function updateRealty(id, title, description, isrental, price, amenities, address) {
+  const pool = getPool();
+  const result = await pool.query(
+    'UPDATE realty SET title = $1, description = $2, isrental = $3, price = $4, amenities = $5, address = $6 WHERE id = $7 RETURNING *',
+    [title, description, isrental, price, amenities, address, id]
+  );
+  return result.rows[0] || null;
+}
+
+async function deleteRealty(id) {
+  const pool = getPool();
+  const result = await pool.query(
+    'DELETE FROM realty WHERE id = $1 RETURNING id',
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
 async function closeDB() {
   if (pool) {
     await pool.end();
@@ -166,5 +213,10 @@ module.exports = {
   createProspect,
   updateProspect,
   deleteProspect,
+  createRealty,
+  getRealties,
+  getRealtyById,
+  updateRealty,
+  deleteRealty,
   closeDB
 };

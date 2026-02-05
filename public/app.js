@@ -150,6 +150,53 @@ async function loadProspects() {
   }
 }
 
+async function loadRealties() {
+  const realtyGallery = document.getElementById('realtyGallery');
+  if (!realtyGallery) return;
+
+  try {
+    const response = await fetch(`${API_URL}/api/realty`);
+
+    if (!response.ok) {
+      realtyGallery.innerHTML = '<div class="col-12 text-center text-danger"><p>Failed to load properties</p></div>';
+      return;
+    }
+
+    const realties = await response.json();
+
+    if (realties.length === 0) {
+      realtyGallery.innerHTML = '<div class="col-12 text-center text-muted"><p>No properties available</p></div>';
+      return;
+    }
+
+    realtyGallery.innerHTML = realties.map(r => `
+      <div class="col-md-6 col-lg-4">
+        <div class="realty-card">
+          <div class="realty-card-header">
+            <span class="realty-tag">${r.isrental ? 'Rental' : 'Sale'}</span>
+          </div>
+          <div class="realty-card-body">
+            <h5 class="realty-title">${r.title}</h5>
+            <p class="realty-address">📍 ${r.address}</p>
+            <p class="realty-price">${r.price || 'Contact for price'}</p>
+            <p class="realty-desc">${r.description}</p>
+            ${r.amenities ? `<p class="realty-desc"><strong>Amenities:</strong> ${r.amenities}</p>` : ''}
+            <button class="realty-bid mt-auto" onclick="viewRealtyDetails(${r.id})">View Details</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('Error loading realties:', error);
+    realtyGallery.innerHTML = '<div class="col-12 text-center text-danger"><p>Error loading properties</p></div>';
+  }
+}
+
+function viewRealtyDetails(realtyId) {
+  alert(`Viewing details for property ID: ${realtyId}`);
+  // Future: implement detailed view or modal
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
@@ -228,5 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (window.location.pathname === '/realtor-home.html') {
     loadProspects();
+  }
+
+  if (window.location.pathname === '/client-home.html') {
+    loadRealties();
   }
 });

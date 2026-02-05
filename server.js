@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
+const bcrypt = require('bcryptjs');
 const db = require('./db.js');
 const auth = require('./auth.js'); 
 const db2 = require('./db_2.js');
@@ -97,7 +98,7 @@ async function handleRequest(req, res) {
         console.log("login user null 2:", (user == null) );
         console.log("login user null 3:", (user == false) );
 
-        if (user && user.password === password) {
+        if (user && await bcrypt.compare(password, user.password)) {
           const token = auth.generateToken(user);
           const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
           res.writeHead(200, { 
@@ -174,6 +175,144 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // REALTY CRUD ENDPOINTS
+  if (pathname === '/api/realty' && req.method === 'GET') {
+    try {
+      const realties = await db2.getRealties();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(realties));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server error' }));
+    }
+    return;
+  }
+
+  if (pathname === '/api/realty' && req.method === 'POST') {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = auth.verifyToken(token);
+
+    if (!user) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
+
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const { title, description, isrental, price, amenities, address } = JSON.parse(body);
+
+        if (!title || !description || address === undefined) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Title, description, and address are required' }));
+          return;
+        }
+
+        const realty = await db2.createRealty(title, description, isrental || false, price, amenities, address);
+        res.writeHead(201, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(realty));
+      } catch (error) {
+        if (error.code === '23505') {
+          res.writeHead(409, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Title already exists' }));
+        } else {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Server error' }));
+        }
+      }
+    });
+    return;
+  }
+
+  // Match /api/realty/:id patterns
+  const realtyIdMatch = pathname.match(/^\/api\/realty\/(\d+)$/);
+  if (realtyIdMatch) {
+    const realtyId = parseInt(realtyIdMatch[1]);
+
+    if (req.method === 'GET') {
+      try {
+        const realty = await db2.getRealtyById(realtyId);
+        if (!realty) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Realty not found' }));
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(realty));
+      } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+      return;
+    }
+
+    if (req.method === 'PUT' || req.method === 'POST') {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      const user = auth.verifyToken(token);
+
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const { title, description, isrental, price, amenities, address } = JSON.parse(body);
+
+          if (!title || !description || address === undefined) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Title, description, and address are required' }));
+            return;
+          }
+
+          const realty = await db2.updateRealty(realtyId, title, description, isrental || false, price, amenities, address);
+          if (!realty) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Realty not found' }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(realty));
+        } catch (error) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Server error' }));
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      const user = auth.verifyToken(token);
+
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+
+      try {
+        const result = await db2.deleteRealty(realtyId);
+        if (!result) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Realty not found' }));
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Realty deleted successfully', id: realtyId }));
+      } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+      return;
+    }
+  }
+
   if (pathname === '/api/realtor-login' && req.method === 'POST') {
       // loging realtor
     let body = '';
@@ -190,7 +329,7 @@ async function handleRequest(req, res) {
         console.log("login user null 2:", (user == null) );
         console.log("login user null 3:", (user == false) );
 
-        if (user && user.password === password) {
+        if (user && await bcrypt.compare(password, user.password)) {
           const token = auth.generateToken(user);
           const cookieOptions = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=3600';
           res.writeHead(200, { 
