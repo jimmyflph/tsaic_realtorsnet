@@ -148,6 +148,17 @@
       background: #764ba2;
     }
 
+    .btn-black {
+      background: #000 !important;
+      color: #fff !important;
+      border: none !important;
+    }
+
+    .btn-black:hover {
+      background: #111 !important;
+      color: #fff !important;
+    }
+
     .realty-tag {
       display: inline-block;
       background: #f0f1ff;
@@ -166,6 +177,43 @@
       color: #777;
       margin-top: 80px;
     }
+
+       .realty-card {
+      border: 1px solid #eee;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .realty-card:hover {
+      box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+      transform: translateY(-4px);
+    }
+
+    .realty-card-header {
+      background: #667eea;
+      color: white;
+      padding: 12px 14px;
+    }
+
+    .realty-card-body {
+      padding: 14px;
+          background-color: white;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .realty-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+    .realty-address { font-size: 0.85rem; color: #666; margin-bottom: 8px; }
+    .realty-price { font-size: 1.1rem; font-weight: 700; color: #667eea; margin-bottom: 10px; }
+    .realty-desc { font-size: 0.85rem; color: #777; margin-bottom: 10px; flex-grow: 1; }
+    .realty-bid { display: inline-block; background: #f0f1ff; color: black; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 600; border: none; cursor: pointer; }
+    .realty-tag { display: inline-block; background: #f0f1ff; color: #667eea; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; margin-top: 6px; }
+ 
   </style>
 </head>
 
@@ -236,7 +284,6 @@
               <table class="table table-striped table-hover">
                 <thead>
                   <tr>
-                    <th>ID</th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Phone</th>
@@ -245,7 +292,7 @@
                 </thead>
                 <tbody id="prospectsTable">
                   <tr>
-                    <td colspan="5" class="text-center">Loading...</td>
+                    <td colspan="4" class="text-center">Loading...</td>
                   </tr>
                 </tbody>
               </table>
@@ -257,19 +304,72 @@
   </div>
 </section>
 
-<!-- REALTY GALLERY -->
-<section class="py-5">
+<!-- REALTY TABLE FOR REALTORS (CRUD) -->
+<section class="py-5 bg-light">
   <div class="container">
-    <h2 class="fw-bold text-center mb-5">Your Properties</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="fw-bold mb-0">Manage Your Properties</h2>
+      <a href="/realtor-realty?page=1&max-items=10" class="btn btn-dark btn-sm">View All Realty</a>
+    </div>
 
-    <div id="realtyGallery" class="row g-4">
-      <!-- Realty cards will load here -->
-      <div class="col-12 text-center text-muted">
-        <p>Loading properties...</p>
+    <div class="card">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Address</th>
+                <th>Price</th>
+                <th>Type</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="realtiesTable">
+              <tr>
+                <td colspan="5" class="text-center">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </section>
+
+  <!-- MY REVIEWS (top 5) -->
+  <section class="py-5 bg-white">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">My Reviews</h2>
+        <a href="/realtor-my-reviews?page=1&max-items=10" class="btn btn-dark btn-sm">View All</a>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>Buyer</th>
+                  <th>Rating</th>
+                  <th>Review</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="myReviewsTable">
+                <tr>
+                  <td colspan="4" class="text-center">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+ 
 
 <footer>
   <div class="container text-center">

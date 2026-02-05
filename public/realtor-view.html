@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Realtor Profile - AI Realty</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #ffffff;
+      color: #222;
+    }
+
+    /* NAV */
+    .navbar {
+      background: #ffffff;
+      border-bottom: 1px solid #eee;
+    }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(to right, #f9fafb, #ffffff);
+      padding: 90px 0;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 700;
+    }
+
+    .hero p {
+      color: #666;
+    }
+
+    /* REALTOR PROFILE SECTION */
+    .realtor-details {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 15px 45px rgba(0,0,0,0.08);
+      padding: 40px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .realtor-avatar {
+      width: 200px;
+      height: 200px;
+      border-radius: 12px;
+      object-fit: cover;
+      margin-bottom: 30px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      background: #f0f1ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .realtor-name {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #222;
+    }
+
+    .realtor-address {
+      font-size: 1rem;
+      color: #666;
+      margin-bottom: 15px;
+    }
+
+    .realtor-email {
+      font-size: 0.95rem;
+      color: #667eea;
+      margin-bottom: 20px;
+    }
+
+    .realtor-email a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .realtor-email a:hover {
+      text-decoration: underline;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .action-buttons .btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary-action {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary-action:hover {
+      background: #764ba2;
+    }
+
+    .btn-secondary-action {
+      background: #f0f1ff;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+
+    .btn-secondary-action:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .realtor-bio {
+      font-size: 0.95rem;
+      color: #666;
+      line-height: 1.6;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    /* REVIEWS SECTION */
+    .reviews-container {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .review-item {
+      background: #f9fafb;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .review-name {
+      font-weight: 600;
+      color: #222;
+    }
+
+    .review-rating {
+      color: #ffc107;
+      font-size: 0.9rem;
+    }
+
+    .review-text {
+      color: #666;
+      font-size: 0.9rem;
+      margin-top: 5px;
+    }
+
+    footer {
+      background: #f9fafb;
+      padding: 40px 0;
+      color: #777;
+      margin-top: 80px;
+    }
+
+    /* REALTY CARDS */
+    .realty-card {
+      border: 1px solid #eee;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .realty-card:hover {
+      box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+      transform: translateY(-4px);
+    }
+
+    .realty-card-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px;
+    }
+
+    .realty-card-body {
+      padding: 18px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .realty-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #222;
+    }
+
+    .realty-address {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .realty-price {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .realty-desc {
+      font-size: 0.85rem;
+      color: #777;
+      margin-bottom: 10px;
+      flex-grow: 1;
+    }
+
+    .realty-bid {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .realty-bid:hover {
+      background: #764ba2;
+      color: white;
+      text-decoration: none;
+    }
+
+    .realty-tag {
+      display: inline-block;
+      background: #f0f1ff;
+      color: #667eea;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 6px;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 768px) {
+      .action-buttons {
+        flex-direction: column;
+      }
+
+      .realtor-name {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="navbar navbar-expand-lg">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/">AI Realty</a>
+    <div class="ms-auto">
+      <button id="logoutBtn" class="btn btn-outline-dark btn-sm">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO WITH REALTOR PROFILE -->
+<section class="hero">
+  <div class="container">
+    <div class="row align-items-stretch g-4">
+
+      <!-- REALTOR PROFILE (FULL WIDTH) -->
+      <div class="col-lg-12">
+        <div class="realtor-details">
+          
+          <!-- Realtor Avatar -->
+          <div id="realtorAvatarContainer" style="width:200px;">
+            <div class="realtor-avatar" style="font-size:4rem;color:#667eea;">👤</div>
+          </div>
+          
+          <!-- Realtor Name & Contact -->
+          <div>
+            <h1 class="realtor-name" id="realtorName">Realtor Name</h1>
+            <p class="realtor-address" id="realtorAddress"></p>
+            <p class="realtor-email" id="realtorEmail"></p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <a id="messageBtn" class="btn btn-primary-action" href="#">Message</a>
+            <button id="addReviewBtn" class="btn btn-secondary-action">Add Review</button>
+          </div>
+
+          <!-- Bio -->
+          <div class="realtor-bio">
+            <p id="realtorBio">Experienced real estate professional dedicated to helping clients find their perfect property.</p>
+          </div>
+
+          <!-- Reviews -->
+          <div class="reviews-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0">Reviews</h5>
+              <a href="#" id="viewAllReviewsLink" style="display:none; font-size:0.9rem;">View All Reviews →</a>
+            </div>
+            <div id="reviewsContainer">
+              <p class="text-muted">Loading reviews...</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- REALTOR'S PROPERTIES GALLERY -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <h2 class="fw-bold text-center mb-5">Properties by <span id="realtorNameGallery">this Realtor</span></h2>
+
+    <div id="realtiesGallery" class="row g-4">
+      <!-- Realty cards will load here -->
+      <div class="col-12 text-center text-muted">
+        <p>Loading properties...</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container text-center">
+    <small>© 2026 AI Realty — Intelligent Real Estate</small>
+  </div>
+</footer>
+
+<!-- Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Review</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3" id="nameField" style="display: none;">
+          <label class="form-label">Your name</label>
+          <input id="reviewName" class="form-control" placeholder="John Doe">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Rating (1-5)</label>
+          <input id="reviewRating" type="number" min="1" max="5" class="form-control" value="5">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Comment</label>
+          <textarea id="reviewComment" class="form-control" rows="4" placeholder="Share your experience..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="submitReviewBtn" class="btn btn-primary">Submit Review</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Import hardcoded realtor images from app.js
+  if (!window.REALTOR_IMAGES) {
+    window.REALTOR_IMAGES = [
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=400&fit=crop',
+      'https://images.unsplash.com/photo-1545996124-1f2a0d4f2f4a?w=400&h=400&fit=crop',
+      'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?w=400&h=400&fit=crop',
+      'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=400&fit=crop'
+    ];
+  }
+
+  function getIdFromPath() {
+    const parts = window.location.pathname.split('/');
+    return parts.length > 2 ? parts[2] : null;
+  }
+
+  function getToken() {
+    return localStorage.getItem('token');
+  }
+
+  async function loadRealtor(id) {
+    try {
+      const resp = await fetch(`/api/realtors/${id}`);
+      if (!resp.ok) throw new Error('Failed');
+      const r = await resp.json();
+      document.getElementById('realtorName').textContent = r.fullname || r.username || 'Realtor';
+      document.getElementById('realtorNameGallery').textContent = r.fullname || r.username || 'this Realtor';
+      document.getElementById('realtorAddress').textContent = r.address || 'Location not provided';
+      document.getElementById('realtorEmail').innerHTML = r.email ? `<a href="mailto:${r.email}">${r.email}</a>` : 'Email not provided';
+      
+      const messageBtn = document.getElementById('messageBtn');
+      if (r.email) messageBtn.href = `mailto:${r.email}`;
+    } catch (err) {
+      console.error('Error loading realtor:', err);
+    }
+  }
+
+  async function loadRealtorProperties(realtorId) {
+    const gallery = document.getElementById('realtiesGallery');
+    try {
+      const resp = await fetch(`/api/realty?realtorId=${realtorId}`);
+      if (!resp.ok) throw new Error('Failed');
+      const realties = await resp.json();
+
+      if (!realties || realties.length === 0) {
+        gallery.innerHTML = '<div class="col-12 text-center text-muted"><p>No properties listed</p></div>';
+        return;
+      }
+
+      gallery.innerHTML = realties.map((r, i) => {
+        const fallback = (window.REALTOR_IMAGES && window.REALTOR_IMAGES.length) ? window.REALTOR_IMAGES[(r.realtor || r.id || i) % window.REALTOR_IMAGES.length] : 'https://via.placeholder.com/48?text=Agent';
+        const realtorImg = r.realtor_image || r.realtor_photo || fallback;
+        const realtorName = r.realtor_fullname || r.realtor_name || '';
+        const realtorEmail = r.realtor_email ? `<br><small>${r.realtor_email}</small>` : '';
+        return `
+        <div class="col-md-4 col-lg-3">
+          <div class="realty-card">
+            <div class="realty-card-header">
+              <span class="realty-tag">${r.isrental ? 'Rental' : 'Sale'}</span>
+            </div>
+            <div class="realty-card-body">
+              <h5 class="realty-title">${r.title}</h5>
+              <p class="realty-address">📍 ${r.address || 'Address not available'}</p>
+              <p class="realty-price">${r.price ? '$' + r.price : 'Contact for price'}</p>
+              <p class="realty-desc">${r.description || 'No description'}</p>
+              ${r.amenities ? `<p class="realty-desc"><strong>Amenities:</strong> ${r.amenities}</p>` : ''}
+              ${realtorName ? `
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+                  <img src="${realtorImg}" alt="agent" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
+                  <div style="font-size:0.9rem;color:#333;">${realtorName}${realtorEmail}</div>
+                </div>
+              ` : ''}
+              <a class="realty-bid mt-auto" href="/property-view/${r.id}">View Property</a>
+            </div>
+          </div>
+        </div>
+      `;
+      }).join('');
+    } catch (err) {
+      console.error('Error loading properties:', err);
+      gallery.innerHTML = '<div class="col-12 text-center text-danger"><p>Error loading properties</p></div>';
+    }
+  }
+
+  async function loadRealtorReviews(realtorId) {
+    const container = document.getElementById('reviewsContainer');
+    const viewAllLink = document.getElementById('viewAllReviewsLink');
+    const limit = 5;
+    
+    try {
+      const resp = await fetch(`/api/realtors/${realtorId}/reviews`);
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed to load reviews (${resp.status})`);
+      }
+      const allReviews = await resp.json();
+
+      if (!allReviews || allReviews.length === 0) {
+        container.innerHTML = '<p class="text-muted">No reviews yet. Be the first to review!</p>';
+        viewAllLink.style.display = 'none';
+        return;
+      }
+
+      // Show view all link if more than limit
+      if (allReviews.length > limit) {
+        viewAllLink.style.display = 'block';
+        viewAllLink.href = `/realtor-reviews?realtor=${realtorId}&page=1&max-items=10`;
+      } else {
+        viewAllLink.style.display = 'none';
+      }
+
+      // Limit to 5 reviews
+      const reviews = allReviews.slice(0, limit);
+
+      container.innerHTML = reviews.map((review, i) => {
+        const reviewImg = review.buyer_image || window.REALTOR_IMAGES[i % window.REALTOR_IMAGES.length];
+        const stars = '⭐'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+        const createdAt = new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        return `
+          <div class="review-item mb-3 p-3" style="background:#f9f9f9; border-radius:8px; border-left:4px solid #667eea;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+              <img src="${reviewImg}" alt="reviewer" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+              <div>
+                <div style="font-weight:600;color:#222;">${review.buyer_name || 'Anonymous'}</div>
+                <div style="font-size:0.85rem;color:#999;">${createdAt}</div>
+              </div>
+            </div>
+            <div style="margin-bottom:10px;">
+              <span style="font-size:0.95rem;">${stars} ${review.rating}/5</span>
+            </div>
+            <div style="color:#555;line-height:1.5;font-size:0.95rem;">${review.review}</div>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error('Error loading reviews:', err);
+      container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+      viewAllLink.style.display = 'none';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const id = getIdFromPath();
+    if (!id) return;
+
+    loadRealtor(id);
+    loadRealtorProperties(id);
+    loadRealtorReviews(id);
+
+    const addReviewBtn = document.getElementById('addReviewBtn');
+    const reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+    const token = getToken();
+    const nameField = document.getElementById('nameField');
+
+    // Show name field only if user is not logged in
+    if (!token) {
+      nameField.style.display = 'block';
+    }
+
+    // Check if user is logged in before allowing review submission
+    addReviewBtn.addEventListener('click', () => {
+      if (!token) {
+        alert('Please log in to submit a review');
+        window.location.href = '/login';
+        return;
+      }
+      reviewModal.show();
+    });
+
+    document.getElementById('submitReviewBtn').addEventListener('click', async () => {
+      const rating = Number(document.getElementById('reviewRating').value);
+      const review = document.getElementById('reviewComment').value.trim();
+      
+      if (!review) {
+        alert('Please enter a review');
+        return;
+      }
+
+      if (!token) {
+        alert('You must be logged in to submit a review');
+        return;
+      }
+
+      try {
+        const resp = await fetch(`/api/realtors/${id}/reviews`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ rating, review })
+        });
+
+        if (resp.status === 201) {
+          alert('Review submitted successfully!');
+          reviewModal.hide();
+          document.getElementById('reviewRating').value = '5';
+          document.getElementById('reviewComment').value = '';
+          // Reload reviews to show the new one
+          loadRealtorReviews(id);
+        } else if (resp.status === 401) {
+          alert('You must be logged in to submit a review');
+          window.location.href = '/login';
+        } else {
+          const error = await resp.json();
+          alert('Error: ' + (error.error || 'Failed to submit review'));
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        alert('Error submitting review');
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    });
+  });
+</script>
+</body>
+</html>

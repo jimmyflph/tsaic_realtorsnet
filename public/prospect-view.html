@@ -201,41 +201,73 @@
   async function loadProspectDetails() {
     try {
       const prospectId = window.location.pathname.split('/')[2];
+      console.log('Loading prospect ID:', prospectId);
       
       if (!prospectId) {
         showError('Invalid prospect ID');
         return;
       }
 
+      const token = getToken();
+      console.log('Token available:', !!token);
+
       const response = await fetch(`/api/prospect/${prospectId}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${getToken() || ''}`
+          'Authorization': `Bearer ${token || ''}`,
+          'Content-Type': 'application/json'
         }
       });
 
+      console.log('Response status:', response.status);
+
       if (response.status === 401) {
+        console.log('Unauthorized - redirecting to login');
         window.location.href = '/login';
         return;
       }
 
+      if (response.status === 403) {
+        showError('You do not have permission to view this prospect');
+        return;
+      }
+
       if (!response.ok) {
-        showError('Prospect not found or access denied');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', errorData);
+        showError(errorData.error || 'Prospect not found or an error occurred');
         return;
       }
 
       const prospect = await response.json();
+      console.log('Prospect data received:', prospect);
       renderProspectDetails(prospect);
     } catch (error) {
       console.error('Error loading prospect:', error);
-      showError('Error loading prospect details');
+      showError('Error loading prospect details: ' + error.message);
     }
   }
 
   function renderProspectDetails(prospect) {
     const content = document.getElementById('prospectContent');
+    
+    // Ensure we have data
+    if (!prospect) {
+      content.innerHTML = '<div class="alert alert-danger">No prospect data available</div>';
+      return;
+    }
+
+    console.log('Rendering prospect:', prospect);
+
+    // Display the prospect details
+    const badge = prospect.status ? `<span class="badge bg-success">${prospect.status}</span>` : '<span class="badge bg-secondary">Unknown</span>';
+    
     content.innerHTML = `
       <div class="detail-section">
+        <div class="detail-row">
+          <div class="detail-label">Prospect ID</div>
+          <div class="detail-value">${prospect.prospect_id || prospect.id || 'N/A'}</div>
+        </div>
         <div class="detail-row">
           <div class="detail-label">Full Name</div>
           <div class="detail-value">${prospect.fullname || prospect.name || '-'}</div>
@@ -249,8 +281,12 @@
           <div class="detail-value">${prospect.phone || '-'}</div>
         </div>
         <div class="detail-row">
+          <div class="detail-label">Address</div>
+          <div class="detail-value">${prospect.address || '-'}</div>
+        </div>
+        <div class="detail-row">
           <div class="detail-label">Status</div>
-          <div class="detail-value"><span class="badge bg-success">${prospect.status || 'Active'}</span></div>
+          <div class="detail-value">${badge}</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">Notes</div>

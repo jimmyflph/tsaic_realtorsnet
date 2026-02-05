@@ -3,12 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>All Prospects - AI Realty</title>
-
-  <!-- Bootstrap -->
+  <title>Realtor Reviews - AI Realty</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
   <style>
@@ -18,13 +14,11 @@
       color: #222;
     }
 
-    /* NAV */
     .navbar {
       background: #ffffff;
       border-bottom: 1px solid #eee;
     }
 
-    /* HEADER */
     .page-header {
       background: linear-gradient(to right, #f9fafb, #ffffff);
       padding: 50px 0;
@@ -36,7 +30,53 @@
       font-weight: 700;
     }
 
-    /* PAGINATION */
+    .review-item {
+      background: #f9f9f9;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .review-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .reviewer-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .reviewer-info {
+      font-size: 0.9rem;
+    }
+
+    .reviewer-name {
+      font-weight: 600;
+      color: #222;
+    }
+
+    .review-date {
+      font-size: 0.85rem;
+      color: #999;
+    }
+
+    .review-rating {
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+
+    .review-text {
+      color: #555;
+      line-height: 1.5;
+      font-size: 0.95rem;
+    }
+
     .pagination-container {
       display: flex;
       justify-content: center;
@@ -75,33 +115,6 @@
       cursor: not-allowed;
     }
 
-    /* ACTION LINKS */
-    .action-link {
-      color: #667eea;
-      text-decoration: none;
-      font-weight: 500;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-
-    .action-link:hover {
-      text-decoration: underline;
-      color: #764ba2;
-    }
-
-    .action-link.text-danger {
-      color: #dc3545;
-    }
-
-    .action-link.text-danger:hover {
-      color: #c82333;
-    }
-
-    .action-separator {
-      color: #ddd;
-      margin: 0 8px;
-    }
-
     footer {
       background: #f9fafb;
       padding: 40px 0;
@@ -128,42 +141,27 @@
 <section class="page-header">
   <div class="container d-flex justify-content-between align-items-center">
     <div>
-      <h1>All Prospect Home Buyers</h1>
-      <p class="text-muted mt-2">Manage and view all your prospects in one place</p>
+      <h1>All Reviews for <span id="realtorName">Realtor</span></h1>
+      <p class="text-muted mt-2">See what clients say about this realtor</p>
     </div>
-    <a href="/prospect-create" class="btn btn-dark btn-sm">+ Create Prospect</a>
-    <a href="/realtor-home" class="btn btn-dark btn-sm ms-2">Back</a>
+    <a href="#" id="backBtn" class="btn btn-dark btn-sm">Back to Profile</a>
   </div>
 </section>
 
-<!-- PROSPECTS TABLE -->
+<!-- REVIEWS LIST -->
 <section class="py-5">
   <div class="container">
     <div class="card">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h3 class="mb-0">Prospect Home Buyers</h3>
+          <h3 class="mb-0">Reviews</h3>
           <div class="text-muted" style="font-size: 0.9rem;">
-            Showing <span id="startRecord">1</span> to <span id="endRecord">10</span> of <span id="totalRecords">0</span> prospects
+            Showing <span id="startRecord">1</span> to <span id="endRecord">10</span> of <span id="totalRecords">0</span> reviews
           </div>
         </div>
         
-        <div class="table-responsive">
-          <table class="table table-striped table-hover">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="prospectsTableBody">
-              <tr>
-                <td colspan="4" class="text-center">Loading...</td>
-              </tr>
-            </tbody>
-          </table>
+        <div id="reviewsContainer">
+          <p class="text-center text-muted">Loading reviews...</p>
         </div>
 
         <!-- PAGINATION -->
@@ -187,8 +185,19 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  if (!window.REALTOR_IMAGES) {
+    window.REALTOR_IMAGES = [
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=400&fit=crop',
+      'https://images.unsplash.com/photo-1545996124-1f2a0d4f2f4a?w=400&h=400&fit=crop',
+      'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?w=400&h=400&fit=crop',
+      'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=400&fit=crop'
+    ];
+  }
+
   const DEFAULT_MAX_ITEMS = 10;
-  let paginationData = null;
+  let realtorId = null;
+  let totalReviews = 0;
 
   function getToken() {
     return localStorage.getItem('token');
@@ -200,6 +209,7 @@
 
   function getUrlParams() {
     const params = new URLSearchParams(window.location.search);
+    realtorId = parseInt(params.get('realtor')) || 1;
     const page = Math.max(1, parseInt(params.get('page')) || 1);
     const maxItems = Math.max(1, parseInt(params.get('max-items')) || DEFAULT_MAX_ITEMS);
     return { page, maxItems };
@@ -207,81 +217,86 @@
 
   function updateUrlParams(page, maxItems) {
     const params = new URLSearchParams();
+    params.set('realtor', realtorId);
     params.set('page', page);
     params.set('max-items', maxItems);
     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
   }
 
-  async function loadProspectsPage() {
+  async function loadRealtorName() {
+    try {
+      const response = await fetch(`/api/realtors/${realtorId}`);
+      if (response.ok) {
+        const realtor = await response.json();
+        document.getElementById('realtorName').textContent = realtor.fullname || realtor.username || 'Realtor';
+      }
+    } catch (error) {
+      console.error('Error loading realtor name:', error);
+    }
+  }
+
+  async function loadReviewsPage() {
     try {
       const { page, maxItems } = getUrlParams();
       
-      const response = await fetch(`/api/view-prospects?page=${page}&maxItems=${maxItems}`, {
+      const response = await fetch(`/api/realtors/${realtorId}/reviews`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${getToken() || ''}`
+          'Content-Type': 'application/json'
         }
       });
 
-      if (response.status === 401) {
-        window.location.href = '/login';
+      if (!response.ok) {
+        document.getElementById('reviewsContainer').innerHTML = '<p class="text-danger">Failed to load reviews</p>';
         return;
       }
 
-      const data = await response.json();
-      paginationData = data.pagination;
-      
-      renderProspectsTable(data.prospects);
-      renderPaginationControls(page, maxItems, paginationData.totalPages);
-      updateRecordInfo(page, maxItems, paginationData.totalRecords);
-    } catch (error) {
-      console.error('Error loading prospects:', error);
-    }
-  }
+      const allReviews = await response.json();
+      totalReviews = allReviews.length;
 
-  function renderProspectsTable(prospects) {
-    const tbody = document.getElementById('prospectsTableBody');
-    if (prospects.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No prospects found</td></tr>';
-    } else {
-      tbody.innerHTML = prospects.map(prospect => `
-        <tr>
-          <td>${prospect.fullname || prospect.name || '-'}</td>
-          <td>${prospect.email || '-'}</td>
-          <td><span class="badge bg-success">${prospect.status || 'Active'}</span></td>
-          <td>
-            <a href="/prospect-view/${prospect.prospect_id || prospect.id}" class="action-link" title="View">View</a>
-            <span class="action-separator">|</span>
-            <a href="#" class="action-link text-danger" onclick="deleteProspect(${prospect.prospect_id || prospect.id}); return false;" title="Delete">Delete</a>
-          </td>
-        </tr>
-      `).join('');
-    }
-  }
-
-  async function deleteProspect(prospectId) {
-    if (!confirm('Are you sure you want to delete this prospect?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/prospect/${prospectId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${getToken()}`
-        }
-      });
-
-      if (response.ok) {
-        // Reload the current page
-        loadProspectsPage();
-      } else {
-        alert('Failed to delete prospect');
+      if (totalReviews === 0) {
+        document.getElementById('reviewsContainer').innerHTML = '<p class="text-center text-muted">No reviews yet</p>';
+        document.getElementById('totalRecords').textContent = '0';
+        return;
       }
+
+      // Calculate pagination
+      const totalPages = Math.ceil(totalReviews / maxItems);
+      const adjustedPage = Math.min(page, totalPages);
+      const startIdx = (adjustedPage - 1) * maxItems;
+      const endIdx = Math.min(adjustedPage * maxItems, totalReviews);
+      const paginatedReviews = allReviews.slice(startIdx, endIdx);
+
+      renderReviewsList(paginatedReviews);
+      renderPaginationControls(adjustedPage, maxItems, totalPages);
+      updateRecordInfo(adjustedPage, maxItems, totalReviews);
+      updateUrlParams(adjustedPage, maxItems);
     } catch (error) {
-      console.error('Error deleting prospect:', error);
-      alert('Error deleting prospect');
+      console.error('Error loading reviews:', error);
+      document.getElementById('reviewsContainer').innerHTML = '<p class="text-danger">Error loading reviews</p>';
     }
+  }
+
+  function renderReviewsList(reviews) {
+    const container = document.getElementById('reviewsContainer');
+    container.innerHTML = reviews.map((review, i) => {
+      const reviewImg = review.buyer_image || window.REALTOR_IMAGES[i % window.REALTOR_IMAGES.length];
+      const stars = '⭐'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+      const createdAt = new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      return `
+        <div class="review-item">
+          <div class="review-header">
+            <img src="${reviewImg}" alt="reviewer" class="reviewer-avatar">
+            <div class="reviewer-info">
+              <div class="reviewer-name">${review.buyer_name || 'Anonymous'}</div>
+              <div class="review-date">${createdAt}</div>
+            </div>
+          </div>
+          <div class="review-rating">${stars} ${review.rating}/5</div>
+          <div class="review-text">${review.review}</div>
+        </div>
+      `;
+    }).join('');
   }
 
   function updateRecordInfo(page, maxItems, totalRecords) {
@@ -294,12 +309,17 @@
   }
 
   function renderPaginationControls(currentPage, maxItems, totalPages) {
+    if (totalPages <= 1) {
+      document.getElementById('paginationControls').innerHTML = '';
+      return;
+    }
+
     const paginationHTML = [];
 
     // Previous button
     paginationHTML.push(`
       <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-        <a class="page-link" href="?page=${Math.max(1, currentPage - 1)}&max-items=${maxItems}">Previous</a>
+        <a class="page-link" href="?realtor=${realtorId}&page=${Math.max(1, currentPage - 1)}&max-items=${maxItems}">Previous</a>
       </li>
     `);
 
@@ -315,7 +335,7 @@
     if (startPage > 1) {
       paginationHTML.push(`
         <li class="page-item">
-          <a class="page-link" href="?page=1&max-items=${maxItems}">1</a>
+          <a class="page-link" href="?realtor=${realtorId}&page=1&max-items=${maxItems}">1</a>
         </li>
       `);
       if (startPage > 2) {
@@ -326,7 +346,7 @@
     for (let i = startPage; i <= endPage; i++) {
       paginationHTML.push(`
         <li class="page-item ${i === currentPage ? 'active' : ''}">
-          <a class="page-link" href="?page=${i}&max-items=${maxItems}">${i}</a>
+          <a class="page-link" href="?realtor=${realtorId}&page=${i}&max-items=${maxItems}">${i}</a>
         </li>
       `);
     }
@@ -337,7 +357,7 @@
       }
       paginationHTML.push(`
         <li class="page-item">
-          <a class="page-link" href="?page=${totalPages}&max-items=${maxItems}">${totalPages}</a>
+          <a class="page-link" href="?realtor=${realtorId}&page=${totalPages}&max-items=${maxItems}">${totalPages}</a>
         </li>
       `);
     }
@@ -345,7 +365,7 @@
     // Next button
     paginationHTML.push(`
       <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-        <a class="page-link" href="?page=${Math.min(totalPages, currentPage + 1)}&max-items=${maxItems}">Next</a>
+        <a class="page-link" href="?realtor=${realtorId}&page=${Math.min(totalPages, currentPage + 1)}&max-items=${maxItems}">Next</a>
       </li>
     `);
 
@@ -357,8 +377,12 @@
     window.location.href = '/login';
   });
 
-  // Load prospects on page load
-  loadProspectsPage();
+  document.addEventListener('DOMContentLoaded', () => {
+    getUrlParams();
+    document.getElementById('backBtn').href = `/realtor-view/${realtorId}`;
+    loadRealtorName();
+    loadReviewsPage();
+  });
 </script>
 </body>
 </html>

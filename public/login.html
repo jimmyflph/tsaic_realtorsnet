@@ -65,6 +65,43 @@
       box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }
 
+    /* REALTY CARDS (copied from index to ensure consistent styling) */
+      .realty-card {
+      border: 1px solid #eee;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .realty-card:hover {
+      box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+      transform: translateY(-4px);
+    }
+
+    .realty-card-header {
+      background: #667eea;
+      color: white;
+      padding: 12px 14px;
+    }
+
+    .realty-card-body {
+      padding: 14px;
+      flex-grow: 1;
+          background-color: white;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .realty-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+    .realty-address { font-size: 0.85rem; color: #666; margin-bottom: 8px; }
+    .realty-price { font-size: 1.1rem; font-weight: 700; color: #667eea; margin-bottom: 10px; }
+    .realty-desc { font-size: 0.85rem; color: #777; margin-bottom: 10px; flex-grow: 1; }
+    .realty-bid { display: inline-block; background: #f0f1ff; color: black; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 600; border: none; cursor: pointer; }
+    .realty-tag { display: inline-block; background: #f0f1ff; color: #667eea; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; margin-top: 6px; }
+ 
     /* GALLERY */
     .property img {
       border-radius: 16px;
@@ -159,23 +196,9 @@
   <div class="container text-center">
     <h2 class="fw-bold mb-5">Trusted Realtors</h2>
 
-    <div class="row justify-content-center g-4">
-      <div class="col-md-3">
-        <img src="https://images.unsplash.com/photo-1544723795-3fb6469f5b39" class="realtor-img mb-3">
-        <h6 class="fw-semibold">Sarah Johnson</h6>
-        <small class="text-muted">Luxury Homes</small>
-      </div>
-
-      <div class="col-md-3">
-        <img src="https://images.unsplash.com/photo-1557862921-37829c790f19" class="realtor-img mb-3">
-        <h6 class="fw-semibold">Michael Lee</h6>
-        <small class="text-muted">Market Expert</small>
-      </div>
-
-      <div class="col-md-3">
-        <img src="https://images.unsplash.com/photo-1527980965255-d3b416303d12" class="realtor-img mb-3">
-        <h6 class="fw-semibold">Emily Carter</h6>
-        <small class="text-muted">Buyer Advocate</small>
+    <div id="realtorsList" class="row justify-content-center g-4">
+      <div class="col-12 text-center text-muted">
+        <p>Loading realtors...</p>
       </div>
     </div>
   </div>
@@ -186,15 +209,9 @@
   <div class="container">
     <h2 class="fw-bold text-center mb-5">Featured Homes</h2>
 
-    <div class="row g-4">
-      <div class="col-md-4 property">
-        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c" class="img-fluid">
-      </div>
-      <div class="col-md-4 property">
-        <img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994" class="img-fluid">
-      </div>
-      <div class="col-md-4 property">
-        <img src="https://images.unsplash.com/photo-1572120360610-d971b9b78825" class="img-fluid">
+    <div id="realtyGallery" class="row g-4">
+      <div class="col-12 text-center text-muted">
+        <p>Loading featured properties...</p>
       </div>
     </div>
   </div>

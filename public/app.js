@@ -1,5 +1,15 @@
 const API_URL = '';
 
+// Hardcoded realtor images used as fallbacks across pages (can be updated centrally)
+window.REALTOR_IMAGES = window.REALTOR_IMAGES || [
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1545996124-1f2a0d4f2f4a?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=400&fit=crop'
+];
+const REALTOR_IMAGES = window.REALTOR_IMAGES;
+
 function getToken() {
   return localStorage.getItem('token');
 }
@@ -118,14 +128,14 @@ async function loadProspects() {
   if (!tableBody) return;
 
   try {
-    const response = await fetch(`${API_URL}/api/prospects`, {
+    const response = await fetch(`${API_URL}/api/view-prospects?page=1&maxItems=5`, {
       headers: {
         'Authorization': `Bearer ${getToken()}`
       }
     });
 
     if (!response.ok) {
-      tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load prospects</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to load prospects</td></tr>';
       return;
     }
 
@@ -133,13 +143,12 @@ async function loadProspects() {
     const prospects = data.prospects || data;
 
     if (!prospects || prospects.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No prospects found</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No prospects found</td></tr>';
       return;
     }
 
     tableBody.innerHTML = prospects.map(p => `
       <tr>
-        <td>${p.prospect_id || p.id || '-'}</td>
         <td>${p.fullname || p.name || '-'}</td>
         <td>${p.email || '-'}</td>
         <td>${p.phone || '-'}</td>
@@ -148,7 +157,7 @@ async function loadProspects() {
     `).join('');
   } catch (error) {
     console.error('Error loading prospects:', error);
-    tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading prospects</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading prospects</td></tr>';
   }
 }
 
@@ -171,8 +180,9 @@ async function loadRealties() {
       return;
     }
 
-    realtyGallery.innerHTML = realties.map(r => `
-      <div class="col-md-6 col-lg-4">
+    realtyGallery.innerHTML = realties.map((r, i) => {
+      return `
+      <div class="col-md-4 col-lg-3">
         <div class="realty-card">
           <div class="realty-card-header">
             <span class="realty-tag">${r.isrental ? 'Rental' : 'Sale'}</span>
@@ -183,15 +193,52 @@ async function loadRealties() {
             <p class="realty-price">${r.price || 'Contact for price'}</p>
             <p class="realty-desc">${r.description}</p>
             ${r.amenities ? `<p class="realty-desc"><strong>Amenities:</strong> ${r.amenities}</p>` : ''}
-             ${r.realtor_fullname ? `<p class="realty-desc"><strong>Agent:</strong> ${r.realtor_fullname}<br><small>${r.realtor_email}</small></p>` : ''}
             <button class="realty-bid mt-auto" onclick="viewRealtyDetails(${r.id})">View Details</button>
           </div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   } catch (error) {
     console.error('Error loading realties:', error);
     realtyGallery.innerHTML = '<div class="col-12 text-center text-danger"><p>Error loading properties</p></div>';
+  }
+}
+
+// Load public realtor list for index (and other pages)
+async function loadRealtorsList(limit) {
+  const container = document.getElementById('realtorsList');
+  if (!container) return;
+
+  try {
+    const resp = await fetch(`${API_URL}/api/realtors`);
+    if (!resp.ok) {
+      container.innerHTML = '<div class="col-12 text-center text-danger"><p>Failed to load realtors</p></div>';
+      return;
+    }
+    let realtors = await resp.json();
+    if (!realtors || realtors.length === 0) {
+      container.innerHTML = '<div class="col-12 text-center text-muted"><p>No realtors found</p></div>';
+      return;
+    }
+    if (limit && Number(limit) > 0) realtors = realtors.slice(0, Number(limit));
+
+    container.innerHTML = realtors.map((r, i) => {
+      const fallback = REALTOR_IMAGES && REALTOR_IMAGES.length ? REALTOR_IMAGES[(r.id || i) % REALTOR_IMAGES.length] : 'https://via.placeholder.com/120?text=Agent';
+      const img = r.image || r.photo || fallback;
+      const title = r.fullname || r.username || 'Realtor';
+      const subtitle = r.title || r.specialty || '';
+      return `
+        <div class="col-md-3 text-center">
+          <img src="${img}" class="realtor-img mb-3" alt="${title}">
+          <h6 class="fw-semibold">${title}</h6>
+          <small class="text-muted">${subtitle}</small>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Error loading realtors list:', err);
+    container.innerHTML = '<div class="col-12 text-center text-danger"><p>Error loading realtors</p></div>';
   }
 }
 
@@ -223,24 +270,84 @@ async function loadPropertyDetails(propertyId) {
     if (priceEl) priceEl.textContent = property.price ? `$${property.price}` : 'Contact for price';
     if (descEl) descEl.textContent = property.description || 'No description available';
     
-    // Update realtor info
+    // Update realtor info (use white card, circular profile image, and themed buttons)
     if (realtorEl) {
       if (property.realtor_fullname) {
+        const fallbackImg = (REALTOR_IMAGES && REALTOR_IMAGES.length) ? REALTOR_IMAGES[(property.realtor || 0) % REALTOR_IMAGES.length] : 'https://via.placeholder.com/120?text=Agent';
+        const realtorImg = property.realtor_image || property.realtor_photo || fallbackImg;
         realtorEl.innerHTML = `
-          <div class="realtor-card">
-            <h6 class="fw-semibold">Agent to Contact</h6>
-            <p class="fw-bold mb-1">${property.realtor_fullname}</p>
-            <p class="text-muted mb-0">
-              <a href="mailto:${property.realtor_email}">${property.realtor_email}</a>
-            </p>
+          <div class="card bg-white p-3" style="border-radius:12px;box-shadow:0 12px 35px rgba(0,0,0,0.06);">
+            <div style="display:flex;gap:12px;align-items:center">
+              <img src="${realtorImg}" alt="agent" style="width:80px;height:80px;border-radius:50%;object-fit:cover;box-shadow:0 8px 20px rgba(0,0,0,0.08);">
+              <div style="flex:1;text-align:left">
+                <div class="fw-bold">${property.realtor_fullname}</div>
+                <div class="text-muted"><a href=\"mailto:${property.realtor_email}\">${property.realtor_email}</a></div>
+              </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+              <a class="btn btn-secondary-action" href="/realtor-view/${property.realtor}">View Realtor</a>
+              <a class="btn btn-secondary-action" href="mailto:${property.realtor_email}">Message</a>
+            </div>
           </div>
         `;
       } else {
         realtorEl.innerHTML = '<p class="text-muted">Agent information not available</p>';
       }
     }
+
+    // Images: main banner and gallery
+    try {
+      const mainImgEl = document.getElementById('propertyMainImage');
+      const galleryEl = document.getElementById('propertyGallery');
+      const modalImg = document.getElementById('modalImage');
+
+      let images = [];
+      if (property.images) {
+        if (Array.isArray(property.images)) images = property.images;
+        else if (typeof property.images === 'string') {
+          // CSV or newline separated
+          images = property.images.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+        }
+      }
+
+      if (mainImgEl) {
+        mainImgEl.src = images.length > 0 ? images[0] : (property.image || mainImgEl.src || 'https://via.placeholder.com/900x400?text=No+Image');
+      }
+
+      if (galleryEl) {
+        if (!images || images.length === 0) {
+          galleryEl.innerHTML = '';
+        } else {
+          galleryEl.innerHTML = images.map((url, idx) => `
+            <div class="gallery-thumb" style="width:120px;height:80px;overflow:hidden;border:1px solid #eee;border-radius:8px;display:inline-block;cursor:pointer;" data-url="${url.replace(/"/g, '&quot;')}">
+              <img src="${url}" alt="img-${idx}" style="width:100%;height:100%;object-fit:cover;">
+            </div>
+          `).join('');
+          // Add event listeners to thumbnails
+          document.querySelectorAll('.gallery-thumb').forEach(thumb => {
+            thumb.addEventListener('click', () => openImageModal(thumb.getAttribute('data-url')));
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error rendering images:', err);
+    }
   } catch (error) {
     console.error('Error loading property details:', error);
+  }
+}
+
+// Open image modal (uses Bootstrap's modal)
+function openImageModal(url) {
+  const modalImg = document.getElementById('modalImage');
+  const modalEl = document.getElementById('imageModal');
+  if (!modalImg || !modalEl) return;
+  modalImg.src = url;
+  try {
+    const bsModal = new bootstrap.Modal(modalEl);
+    bsModal.show();
+  } catch (err) {
+    console.error('Failed to open image modal', err);
   }
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -321,11 +428,133 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (window.location.pathname === '/realtor-home' || window.location.pathname.includes('realtor-home')) {
     loadProspects();
+    // load realtor's own properties and show max 5 rows on dashboard
+    loadMyRealties(5);
+    // Add button is a link to the create page; no JS handler required
+    loadMyReviews(5);
+  }
+
+  if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+    loadRealties();
+    loadRealtorsList(5);
+  }
+
+  if (window.location.pathname === '/login.html' || window.location.pathname === '/login') {
+    loadRealties();
+    loadRealtorsList(5);
   }
 
   if (window.location.pathname === '/client-home') {
     loadRealties();
+    loadRealtorsList(5);
   }
+
+  if (window.location.pathname === '/realtor-realty' || window.location.pathname.includes('realtor-realty')) {
+    // View-all properties page should load full list and show Add Property there
+    loadMyRealties();
+  }
+
+  // Realtor CRUD functions
+  async function loadMyRealties(limit) {
+    const tableBody = document.getElementById('realtiesTable');
+    if (!tableBody) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/realty?mine=true`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+
+      if (!response.ok) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load properties</td></tr>';
+        return;
+      }
+
+      let realties = await response.json();
+      if (!realties || realties.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No properties found</td></tr>';
+        return;
+      }
+
+      // If a limit is provided, only show that many rows (used on realtor home)
+      if (limit && Number(limit) > 0) {
+        realties = realties.slice(0, Number(limit));
+      }
+
+      tableBody.innerHTML = realties.map(r => `
+        <tr>
+          <td>${r.title}</td>
+          <td>${r.address || '-'}</td>
+          <td>${r.price || '-'}</td>
+          <td>${r.isrental ? 'Rental' : 'Sale'}</td>
+          <td>
+            <a class="btn btn-sm btn-black me-2" style="color:black!important; background: #f2f2f2!important;" href="/property-view/${r.id}">View</a>
+            <a class="btn btn-sm btn-black me-2" style="color:black!important; background: #f2f2f2!important;" href="/realtor-realty-form/${r.id}">Edit</a>
+            <a class="btn btn-sm btn-black" style="color:black!important; background: #f2f2f2!important;" href="/realtor-realty-delete/${r.id}">Delete</a>
+          </td>
+        </tr>
+      `).join('');
+    } catch (error) {
+      console.error('Error loading realties:', error);
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading properties</td></tr>';
+    }
+  }
+
+  function createRealtyPrompt() {
+    // navigate to create form page
+    window.location.href = '/realtor-realty-form';
+  }
+
+  function editRealtyPrompt(id) {
+    // navigate to edit form page
+    window.location.href = `/realtor-realty-form/${id}`;
+  }
+
+    async function loadMyReviews(limit) {
+      const tableBody = document.getElementById('myReviewsTable');
+      if (!tableBody) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/my-reviews`, {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+
+        if (!response.ok) {
+          tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to load reviews</td></tr>';
+          return;
+        }
+
+        let reviews = await response.json();
+        if (!reviews || reviews.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No reviews yet</td></tr>';
+          return;
+        }
+
+        // If a limit is provided, only show that many rows (used on realtor home)
+        if (limit && Number(limit) > 0) {
+          reviews = reviews.slice(0, Number(limit));
+        }
+
+        tableBody.innerHTML = reviews.map(r => {
+          const stars = '⭐'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+          const createdAt = new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          return `
+            <tr>
+              <td>${r.buyer_name || 'Anonymous'}</td>
+              <td><span class="badge bg-primary">${r.rating}/5</span></td>
+              <td>${r.review.substring(0, 50)}...</td>
+              <td>${createdAt}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Error loading reviews:', error);
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading reviews</td></tr>';
+      }
+    }
+
+  // delete action is handled on a separate page
+
+  
 
   
   if (window.location.pathname.startsWith('/property-view/')) {
@@ -333,7 +562,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const propertyId = window.location.pathname.split('/')[2];
     if (propertyId) {
       loadPropertyDetails(propertyId);
-    }
-    loadRealties();
+      }
+      loadRealties();
+      loadRealtorsList(5);
   }
 });

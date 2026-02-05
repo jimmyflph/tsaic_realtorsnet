@@ -8,7 +8,7 @@ const auth = require('./auth.js');
 const db2 = require('./db_2.js');
 // const { use } = require('react');
 
-const PORT = 3003;
+const PORT = 3006;
 const PUBLIC_DIR = path.join(__dirname, 'public');
  
 db2.initDB();
@@ -257,7 +257,7 @@ async function handleRequest(req, res) {
     return;
   }
 
-    // SEARCH for buyers by name, email, or city
+    // SEARCH for buyers by name, email, or city (excluding already prospected buyers)
     if (pathname === '/api/search-buyers' && req.method === 'GET') {
       const token = req.headers.authorization?.replace('Bearer ', '');
       const user = auth.verifyToken(token);
@@ -277,7 +277,8 @@ async function handleRequest(req, res) {
           return;
         }
 
-        const buyers = await db2.searchBuyers(searchQuery);
+        const realtorId = user.id;
+        const buyers = await db2.searchBuyersExcludeProspects(searchQuery, realtorId);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(buyers));
       } catch (error) {
@@ -304,15 +305,26 @@ async function handleRequest(req, res) {
     try {
       const prospect = await db2.getProspectById(prospectId);
       if (!prospect) {
+        console.log(`Prospect ${prospectId} not found for user ${user.id}`);
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Prospect not found' }));
         return;
       }
+
+      // Verify user is the realtor for this prospect
+      if (prospect.realtor !== user.id) {
+        console.log(`Unauthorized: User ${user.id} is not the realtor for prospect ${prospectId}`);
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Access denied' }));
+        return;
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(prospect));
     } catch (error) {
+      console.error(`Error retrieving prospect ${prospectId}:`, error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Server error' }));
+      res.end(JSON.stringify({ error: 'Server error', details: error.message }));
     }
     return;
   }
@@ -332,7 +344,7 @@ async function handleRequest(req, res) {
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
-        const { userId, fullname, email, phone, status, notes } = JSON.parse(body);
+        const { userId, fullname, email, status, notes } = JSON.parse(body);
 
         // If userId is provided, create prospect linked to existing buyer
         if (userId) {
@@ -341,16 +353,7 @@ async function handleRequest(req, res) {
           res.end(JSON.stringify(prospect));
           return;
         }
-
-        if (!fullname || !email) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Full name and email are required' }));
-          return;
-        }
-
-        const prospect = await db2.createProspect(fullname, email, phone, status, notes, user.id);
-        res.writeHead(201, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(prospect));
+ 
       } catch (error) {
         console.error('Error creating prospect:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -391,6 +394,31 @@ async function handleRequest(req, res) {
   // REALTY CRUD ENDPOINTS
   if (pathname === '/api/realty' && req.method === 'GET') {
     try {
+      const query = parsedUrl.query || {};
+      // If requester asked for their own properties, require auth and return only those
+      if (query.mine === 'true') {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        const user = auth.verifyToken(token);
+        if (!user) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized' }));
+          return;
+        }
+        const realties = await db2.getRealtiesByRealtor(user.id);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(realties));
+        return;
+      }
+
+      // If realtorId is specified, return only that realtor's properties
+      if (query.realtorId) {
+        const realtorId = parseInt(query.realtorId);
+        const realties = await db2.getRealtiesByRealtor(realtorId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(realties));
+        return;
+      }
+
       const realties = await db2.getRealties();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(realties));
@@ -417,7 +445,7 @@ async function handleRequest(req, res) {
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
-        const { title, description, isrental, price, amenities, address } = JSON.parse(body);
+        const { title, description, isrental, price, amenities, address, images } = JSON.parse(body);
 
         if (!title || !description || address === undefined) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -425,7 +453,7 @@ async function handleRequest(req, res) {
           return;
         }
 
-        const realty = await db2.createRealty(title, description, isrental || false, price, amenities, address);
+          const realty = await db2.createRealty(title, description, isrental || false, price, amenities, address, user.id, images || []);
         res.writeHead(201, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(realty));
       } catch (error) {
@@ -477,7 +505,7 @@ async function handleRequest(req, res) {
       req.on('data', chunk => body += chunk);
       req.on('end', async () => {
         try {
-          const { title, description, isrental, price, amenities, address } = JSON.parse(body);
+          const { title, description, isrental, price, amenities, address, images } = JSON.parse(body);
 
           if (!title || !description || address === undefined) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -485,15 +513,25 @@ async function handleRequest(req, res) {
             return;
           }
 
-          const realty = await db2.updateRealty(realtyId, title, description, isrental || false, price, amenities, address);
-          if (!realty) {
+          // Verify user owns this realty
+          const existingRealty = await db2.getRealtyById(realtyId);
+          if (!existingRealty) {
             res.writeHead(404, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Realty not found' }));
             return;
           }
+
+          if (existingRealty.realtor !== user.id) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Access denied' }));
+            return;
+          }
+
+          const realty = await db2.updateRealty(realtyId, title, description, isrental || false, price, amenities, address, images || []);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(realty));
         } catch (error) {
+          console.error('Error updating realty:', error);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Server error' }));
         }
@@ -512,15 +550,25 @@ async function handleRequest(req, res) {
       }
 
       try {
-        const result = await db2.deleteRealty(realtyId);
-        if (!result) {
+        // Verify user owns this realty
+        const existingRealty = await db2.getRealtyById(realtyId);
+        if (!existingRealty) {
           res.writeHead(404, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Realty not found' }));
           return;
         }
+
+        if (existingRealty.realtor !== user.id) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Access denied' }));
+          return;
+        }
+
+        const result = await db2.deleteRealty(realtyId);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ message: 'Realty deleted successfully', id: realtyId }));
       } catch (error) {
+        console.error('Error deleting realty:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Server error' }));
       }
@@ -565,6 +613,162 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // API: list realtors
+  if (pathname === '/api/realtors' && req.method === 'GET') {
+    try {
+      const realtors = await db2.getRealtors(200);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(realtors));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server error' }));
+    }
+    return;
+  }
+
+  // API: get realtor by id
+  const realtorIdMatch = pathname.match(/^\/api\/realtors\/(\d+)$/);
+  if (realtorIdMatch && req.method === 'GET') {
+    try {
+      const id = parseInt(realtorIdMatch[1]);
+      const user = await db2.getUserById(id);
+      if (!user || user.role !== 'realtor') {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Realtor not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(user));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server error' }));
+    }
+    return;
+  }
+
+  // API: get/post reviews for realtor
+  const realtorReviewMatch = pathname.match(/^\/api\/realtors\/(\d+)\/reviews$/);
+  
+  if (realtorReviewMatch && req.method === 'GET') {
+    try {
+      const realtorId = parseInt(realtorReviewMatch[1]);
+      const reviews = await db2.getReviewsByRealtorId(realtorId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(reviews));
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server error' }));
+    }
+    return;
+  }
+
+  // API: submit review for realtor (POST - persist to DB)
+  if (realtorReviewMatch && req.method === 'POST') {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = auth.verifyToken(token);
+
+    if (!user) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
+
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const realtorId = parseInt(realtorReviewMatch[1]);
+        const { rating, review } = JSON.parse(body || '{}');
+        
+        if (!rating) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Rating is required' }));
+          return;
+        }
+
+        const reviewRecord = await db2.createReview(realtorId, user.id, rating, review || '');
+        res.writeHead(201, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(reviewRecord));
+      } catch (err) {
+        console.error('Error creating review:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+    });
+    return;
+  }
+
+    // API: get logged-in realtor's reviews (my reviews)
+    if (pathname === '/api/my-reviews' && req.method === 'GET') {
+      try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        const user = auth.verifyToken(token);
+
+        if (!user) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized' }));
+          return;
+        }
+
+        // Get reviews for the logged-in realtor
+        const reviews = await db2.getReviewsByRealtorId(user.id);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(reviews));
+      } catch (error) {
+        console.error('Error fetching my reviews:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+      return;
+    }
+
+  // Match /realtor-view/:id pattern (public view for non-user)
+  const realtorViewMatch = pathname.match(/^\/realtor-view\/(\d+)$/);
+  if (realtorViewMatch) {
+    const filePath = path.join(PUBLIC_DIR, 'realtor-view.html');
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('<h1>404 Not Found</h1>');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+
+  // Match /realtor-reviews pattern (reviews list for realtor)
+  if (pathname === '/realtor-reviews') {
+    const filePath = path.join(PUBLIC_DIR, 'realtor-reviews.html');
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('<h1>404 Not Found</h1>');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+
+    // Match /realtor-my-reviews pattern (my reviews list for logged-in realtor)
+    if (pathname === '/realtor-my-reviews') {
+      const filePath = path.join(PUBLIC_DIR, 'realtor-my-reviews.html');
+      fs.readFile(filePath, (err, content) => {
+        if (err) {
+          res.writeHead(404, { 'Content-Type': 'text/html' });
+          res.end('<h1>404 Not Found</h1>');
+        } else {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(content);
+        }
+      });
+      return;
+    }
+
   // Match /property-view/:id pattern
   const propertyViewMatch = pathname.match(/^\/property-view\/(\d+)$/);
   if (propertyViewMatch) {
@@ -587,6 +791,38 @@ async function handleRequest(req, res) {
   if (prospectViewMatch) {
     // Serve prospect-view.html for any /prospect-view/:id route
     const filePath = path.join(PUBLIC_DIR, 'prospect-view.html');
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('<h1>404 Not Found</h1>');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+
+  // Match /realtor-realty-form and /realtor-realty-form/:id
+  const realtorFormMatch = pathname.match(/^\/realtor-realty-form(?:\/(\d+))?$/);
+  if (realtorFormMatch) {
+    const filePath = path.join(PUBLIC_DIR, 'realtor-realty-form.html');
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('<h1>404 Not Found</h1>');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+
+  // Match /realtor-realty-delete/:id
+  const realtorDeleteMatch = pathname.match(/^\/realtor-realty-delete\/(\d+)$/);
+  if (realtorDeleteMatch) {
+    const filePath = path.join(PUBLIC_DIR, 'realtor-realty-delete.html');
     fs.readFile(filePath, (err, content) => {
       if (err) {
         res.writeHead(404, { 'Content-Type': 'text/html' });
