@@ -147,18 +147,44 @@ async function createRealty(title, description, isrental, price, amenities, addr
 
 async function getRealties() {
   const pool = getPool();
-  const result = await pool.query(
-    'SELECT id, title, description, isrental, price, amenities, address, created_at FROM realty ORDER BY created_at DESC'
-  );
+    const result = await pool.query(
+      `SELECT 
+        r.id, 
+        r.title, 
+        r.description, 
+        r.isrental, 
+        r.price, 
+        r.amenities, 
+        r.address, 
+        r.created_at,
+        u.fullname AS realtor_fullname,
+        u.email AS realtor_email
+      FROM realty r
+      LEFT JOIN users u ON r.realtor = u.id
+      ORDER BY r.created_at DESC`
+    );
   return result.rows;
 }
 
 async function getRealtyById(id) {
   const pool = getPool();
-  const result = await pool.query(
-    'SELECT id, title, description, isrental, price, amenities, address, created_at FROM realty WHERE id = $1',
-    [id]
-  );
+    const result = await pool.query(
+      `SELECT 
+        r.id, 
+        r.title, 
+        r.description, 
+        r.isrental, 
+        r.price, 
+        r.amenities, 
+        r.address, 
+        r.created_at,
+        u.fullname AS realtor_fullname,
+        u.email AS realtor_email
+      FROM realty r
+      LEFT JOIN users u ON r.realtor = u.id
+      WHERE r.id = $1`,
+      [id]
+    );
   return result.rows[0] || null;
 }
 

@@ -8,7 +8,7 @@ const auth = require('./auth.js');
 const db2 = require('./db_2.js');
 // const { use } = require('react');
 
-const PORT = 3004;
+const PORT = 3007;
 const PUBLIC_DIR = path.join(__dirname, 'public');
  
 db2.initDB();
@@ -349,9 +349,32 @@ async function handleRequest(req, res) {
     });
     return;
   }
-console.log("pathname:", pathname);
-console.log("pathname:", pathname);
+
+  // Match /property-view/:id pattern
+  const propertyViewMatch = pathname.match(/^\/property-view\/(\d+)$/);
+  if (propertyViewMatch) {
+    // Serve property-view.html for any /property-view/:id route
+    const filePath = path.join(PUBLIC_DIR, 'property-view.html');
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('<h1>404 Not Found</h1>');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+
+  // Static file serving
   let filePath = pathname === '/' ? '/index.html' : pathname;
+  
+  // If the path doesn't have an extension, try appending .html
+  if (!path.extname(filePath)) {
+    filePath += '.html';
+  }
+  
   filePath = path.join(PUBLIC_DIR, filePath);
 
   fs.readFile(filePath, (err, content) => {

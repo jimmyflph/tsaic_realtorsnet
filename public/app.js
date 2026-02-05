@@ -181,6 +181,7 @@ async function loadRealties() {
             <p class="realty-price">${r.price || 'Contact for price'}</p>
             <p class="realty-desc">${r.description}</p>
             ${r.amenities ? `<p class="realty-desc"><strong>Amenities:</strong> ${r.amenities}</p>` : ''}
+             ${r.realtor_fullname ? `<p class="realty-desc"><strong>Agent:</strong> ${r.realtor_fullname}<br><small>${r.realtor_email}</small></p>` : ''}
             <button class="realty-bid mt-auto" onclick="viewRealtyDetails(${r.id})">View Details</button>
           </div>
         </div>
@@ -192,11 +193,54 @@ async function loadRealties() {
   }
 }
 
+
 function viewRealtyDetails(realtyId) {
-  alert(`Viewing details for property ID: ${realtyId}`);
-  // Future: implement detailed view or modal
+  window.location.href = `/property-view/${realtyId}`;
 }
 
+async function loadPropertyDetails(propertyId) {
+  try {
+    const response = await fetch(`${API_URL}/api/realty/${propertyId}`);
+    
+    if (!response.ok) {
+      console.error('Failed to load property details');
+      return;
+    }
+
+    const property = await response.json();
+    
+    // Update property details
+    const titleEl = document.querySelector('.property-title');
+    const addressEl = document.querySelector('.property-address');
+    const priceEl = document.querySelector('.property-price');
+    const descEl = document.querySelector('.property-description');
+    const realtorEl = document.getElementById('realtorInfo');
+    
+    if (titleEl) titleEl.textContent = property.title || 'Property Details';
+    if (addressEl) addressEl.textContent = `📍 ${property.address || 'Address not available'}`;
+    if (priceEl) priceEl.textContent = property.price ? `$${property.price}` : 'Contact for price';
+    if (descEl) descEl.textContent = property.description || 'No description available';
+    
+    // Update realtor info
+    if (realtorEl) {
+      if (property.realtor_fullname) {
+        realtorEl.innerHTML = `
+          <div class="realtor-card">
+            <h6 class="fw-semibold">Agent to Contact</h6>
+            <p class="fw-bold mb-1">${property.realtor_fullname}</p>
+            <p class="text-muted mb-0">
+              <a href="mailto:${property.realtor_email}">${property.realtor_email}</a>
+            </p>
+          </div>
+        `;
+      } else {
+        realtorEl.innerHTML = '<p class="text-muted">Agent information not available</p>';
+      }
+    }
+  } catch (error) {
+    console.error('Error loading property details:', error);
+  }
+}
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
@@ -273,11 +317,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (window.location.pathname === '/realtor-home.html') {
+  if (window.location.pathname === '/realtor-home') {
     loadProspects();
   }
 
-  if (window.location.pathname === '/client-home.html') {
+  if (window.location.pathname === '/client-home') {
+    loadRealties();
+  }
+
+  
+  if (window.location.pathname.startsWith('/property-view/')) {
+    // Extract property ID from URL
+    const propertyId = window.location.pathname.split('/')[2];
+    if (propertyId) {
+      loadPropertyDetails(propertyId);
+    }
     loadRealties();
   }
 });
