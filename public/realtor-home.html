@@ -19,14 +19,10 @@
     }
 
     /* NAV */
-    .navbar {
-      background: #ffffff;
-      border-bottom: 1px solid #eee;
-    }
 
     /* HERO */
     .hero {
-      background: linear-gradient(to right, #f9fafb, #ffffff);
+      background: linear-gradient(to right, rgba(249, 250, 251, 0.9), rgba(255, 255, 255, 0.9)), url('/images/map.jpg') center/cover no-repeat;
       padding: 90px 0;
     }
 
@@ -220,12 +216,14 @@
 <body>
 
 <!-- NAV -->
-<nav class="navbar navbar-expand-lg">
+<nav class="navbar navbar-expand-lg" style="color:white!important;background: linear-gradient(135deg, #7492eb 0%, #aa5ff5 100%) !important;">
   <div class="container">
-    <a class="navbar-brand fw-bold" href="/">AI Realty</a>
+    <a class="navbar-brand fw-bold" href="/" style="color:white!important;border-color:white!important;">AI Realty</a>
     <div class="ms-auto d-flex align-items-center" style="gap:8px;">
-      <a href="/realtor-messages" class="btn btn-outline-primary btn-sm">Messages</a>
-      <button id="logoutBtn" class="btn btn-outline-dark btn-sm">Logout</button>
+      <a href="#" id="messagesLink" class="btn btn-sm" style="color:white!important;">Messages</a>
+      <a href="#" id="settingsBtn" class="btn btn-sm" style="color:white!important;display:none">Settings</a>
+      <a href="/search-property" class="btn btn-sm" style="color:white!important;">Search</a>
+      <button id="logoutBtn" class="btn btn-sm" style="color:white!important;">Logout</button>
     </div>
   </div>
 </nav>
@@ -380,5 +378,40 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/app.js"></script>
+<script>
+  // Set messages link and logout behavior based on token
+  (function(){
+    const token = localStorage.getItem('token');
+    const messagesLink = document.getElementById('messagesLink');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    function decodePayload(tok){
+      try{
+        const parts = tok.split('.'); if(parts.length<2) return null;
+        const payload = parts[1].replace(/-/g,'+').replace(/_/g,'/');
+        const json = decodeURIComponent(atob(payload).split('').map(function(c){ return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
+        return JSON.parse(json);
+      }catch(e){return null}
+    }
+
+    const settingsBtn = document.getElementById('settingsBtn');
+
+    if(messagesLink){
+      if(token){
+        const payload = decodePayload(token);
+        const role = payload && payload.role ? payload.role : '';
+        messagesLink.href = role === 'realtor' ? '/realtor-messages' : '/client-messages';
+        if(settingsBtn){ settingsBtn.style.display = ''; settingsBtn.href = role === 'realtor' ? '/realtor-settings' : '/settings'; }
+      } else {
+        messagesLink.href = '/login.html';
+        if(settingsBtn) settingsBtn.style.display = 'none';
+      }
+    }
+
+    if(logoutBtn){
+      logoutBtn.addEventListener('click', ()=>{ localStorage.removeItem('token'); window.location.href='/login.html'; });
+    }
+  })();
+</script>
 </body>
 </html>

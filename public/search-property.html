@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Search Properties - AI Realty</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Inter',sans-serif;background:#fff;color:#222}
+    
+    /* PROPERTY DETAILS CARD (80% LEFT) */
+    .property-details {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 15px 45px rgba(0,0,0,0.08);
+      padding: 40px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* CHAT CONTAINER CARD (20% RIGHT) */
+    .chat-container {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 15px 45px rgba(0,0,0,0.08);
+      padding: 25px;
+      max-height: 360px;
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      margin-bottom: 15px;
+    }
+
+    .chat-header h1 {
+      font-size: 1.3rem;
+      margin-bottom: 5px;
+      font-weight: 700;
+    }
+
+    .chat-header p {
+      font-size: 0.9rem;
+      color: #666;
+      margin: 0;
+    }
+
+    .chat-messages {
+      height: 260px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      flex-grow: 1;
+    }
+
+    .chat-input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .message.bot {
+      color: #666;
+    }
+    
+    /* SEARCH STYLES */
+    .search-bar{display:flex;gap:10px;align-items:center;margin-bottom:20px}
+    .search-input{flex:1}
+    .filter-select{width:180px}
+    
+    /* RESULT CARDS */
+    .realty-card{
+      border-radius:12px;
+      padding:16px;
+      border:1px solid #eee;
+      margin-bottom:12px;
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+    
+    .realty-card:hover {
+      box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+      transform: translateY(-4px);
+    }
+    
+    .realty-title{font-weight:700;font-size:1rem}
+    .pagination-container{display:flex;justify-content:center;margin-top:20px}
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg" style="color:white!important;background: linear-gradient(135deg, #7492eb 0%, #aa5ff5 100%) !important;">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/" style="color:white!important;border-color:white!important;">AI Realty</a>
+    <div class="ms-auto d-flex align-items-center" style="gap:8px;">
+      <a href="#" id="messagesLink" class="btn btn-sm" style="color:white!important;">Messages</a>
+      <a href="#" id="settingsBtn" class="btn btn-sm" style="color:white!important;display:none">Settings</a>
+      <a href="/search-property" class="btn btn-sm" style="color:white!important;">Search</a>
+      <button id="logoutBtn" class="btn btn-sm" style="color:white!important;">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row g-4">
+      <!-- LEFT: 80% card with search + results -->
+      <div class="col-lg-8">
+        <div class="property-details">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;">
+            <div style="flex:1">
+              <h3 class="mb-1">Search Properties</h3>
+              <p class="text-muted mb-0">Search by title, description or address and filter by rental/sale.</p>
+            </div>
+          </div>
+
+          <div class="search-bar mb-3">
+            <input id="qInput" class="form-control search-input" placeholder="Search by title, description or address" style="flex:1">
+            <select id="isrentalSelect" class="form-select filter-select" style="width:150px">
+              <option value="">Any</option>
+              <option value="true">Rental</option>
+              <option value="false">For Sale</option>
+            </select>
+            <button id="searchBtn" class="btn btn-primary" style="background:#667eea;border:none;color:white">Search</button>
+          </div>
+
+          <div id="results"></div>
+
+          <div class="pagination-container">
+            <nav aria-label="Page navigation"><ul class="pagination mb-0" id="paginationControls"></ul></nav>
+          </div>
+
+          <div id="recordInfo" class="text-center text-muted mt-3"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: 20% AI Chat Card -->
+      <div class="col-lg-4">
+        <div class="chat-container">
+          <div class="chat-header">
+            <h1>AI Assistant</h1>
+            <p>Ask about properties</p>
+          </div>
+
+          <div id="chatMessages" class="chat-messages">
+            <div class="message bot">
+              <strong>AI Assistant:</strong> Ask me any questions about properties or the search results.
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Type your question..." class="form-control">
+            <button id="sendBtn" class="btn w-100" style="background:#667eea;color:white;border:none">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="mt-5">
+  <div class="container text-center"><small>© 2026 AI Realty</small></div>
+</footer>
+
+<script>
+  const DEFAULT_MAX_ITEMS = 12;
+  function getUrlParams(){const p=new URLSearchParams(window.location.search);return{page:Math.max(1,parseInt(p.get('page'))||1),maxItems:Math.max(1,parseInt(p.get('max-items'))||DEFAULT_MAX_ITEMS),q:p.get('q')||'',isrental:p.get('isrental')||''}}
+  function updateUrl(page,maxItems,q,isrental){const p=new URLSearchParams();p.set('page',page);p.set('max-items',maxItems);if(q) p.set('q',q); if(isrental) p.set('isrental',isrental);window.history.replaceState({},'',`${window.location.pathname}?${p.toString()}`)}
+
+  function escapeHtml(text){const d=document.createElement('div');d.textContent=text;return d.innerHTML}
+
+  async function doSearch(page=1){
+    const {maxItems} = getUrlParams();
+    const q=document.getElementById('qInput').value.trim();
+    const isrental=document.getElementById('isrentalSelect').value;
+    const results=document.getElementById('results'); results.innerHTML='<p class="text-muted">Loading...</p>';
+    try{
+      const resp=await fetch(`/api/realty?q=${encodeURIComponent(q)}&isrental=${encodeURIComponent(isrental)}&page=${page}&max-items=${maxItems}`);
+      if(!resp.ok) throw new Error('Failed');
+      const data=await resp.json();
+      const realties = data.realties || data.realties || [];
+      const pagination = data.pagination || { page:1, limit: maxItems, totalRecords: realties.length, totalPages:1 };
+      if(!realties || realties.length===0){ results.innerHTML='<p class="text-muted">No properties found</p>'; document.getElementById('paginationControls').innerHTML=''; document.getElementById('recordInfo').textContent=''; return; }
+      // build cards with banner image (first image from CSV or default)
+      function getMainImage(r){ try{ if(r.images){ const imgs = r.images.split(',').map(s=>s.trim()).filter(Boolean); if(imgs.length) return imgs[0]; } }catch(e){} return window.DEFAULT_PROPERTY_IMAGE||'/public/default-property.jpg'; }
+      results.innerHTML = realties.map(r=>{ const img = escapeHtml(getMainImage(r)); return `<div class="realty-card"><div style="height:180px;overflow:hidden;border-radius:8px;margin-bottom:12px;"><img src="${img}" style="width:100%;height:180px;object-fit:cover;"></div><div class="d-flex justify-content-between"><div><div class="realty-title">${escapeHtml(r.title||'')}</div><div class="text-muted">${escapeHtml(r.address||'')}</div></div><div><div class="text-end">${r.isrental?'<span class="badge bg-info">Rental</span>':'<span class="badge bg-success">For Sale</span>'}</div></div></div><p>${escapeHtml((r.description||'').substring(0,200))}</p><a href="/property-view/${r.id}" class="btn btn-sm btn-outline-primary">View</a></div>` }).join('');
+      renderPaginationControls(pagination.page,pagination.limit,pagination.totalPages);
+      document.getElementById('recordInfo').textContent = `Showing ${(pagination.page-1)*pagination.limit+1} to ${Math.min(pagination.page*pagination.limit,pagination.totalRecords)} of ${pagination.totalRecords} properties`;
+      updateUrl(pagination.page,pagination.limit,q,isrental);
+    }catch(e){console.error(e);results.innerHTML='<p class="text-danger">Error searching properties</p>'}
+  }
+
+  function renderPaginationControls(currentPage,maxItems,totalPages){const el=document.getElementById('paginationControls'); if(totalPages<=1){el.innerHTML='';return} const maxVisible=5; let startPage=Math.max(1,currentPage-Math.floor(maxVisible/2)); let endPage=Math.min(totalPages,startPage+maxVisible-1); if(endPage-startPage+1<maxVisible) startPage=Math.max(1,endPage-maxVisible+1); const html=[]; html.push(`<li class="page-item ${currentPage===1?'disabled':''}"><a class="page-link" href="?page=${Math.max(1,currentPage-1)}&max-items=${maxItems}">Previous</a></li>`); if(startPage>1){html.push(`<li class="page-item"><a class="page-link" href="?page=1&max-items=${maxItems}">1</a></li>`); if(startPage>2) html.push('<li class="page-item disabled"><span class="page-link">...</span></li>'); } for(let i=startPage;i<=endPage;i++){html.push(`<li class="page-item ${i===currentPage?'active':''}"><a class="page-link" href="?page=${i}&max-items=${maxItems}">${i}</a></li>`)} if(endPage<totalPages){ if(endPage<totalPages-1) html.push('<li class="page-item disabled"><span class="page-link">...</span></li>'); html.push(`<li class="page-item"><a class="page-link" href="?page=${totalPages}&max-items=${maxItems}">${totalPages}</a></li>`)} html.push(`<li class="page-item ${currentPage===totalPages?'disabled':''}"><a class="page-link" href="?page=${Math.min(totalPages,currentPage+1)}&max-items=${maxItems}">Next</a></li>`); el.innerHTML=html.join(''); }
+
+  document.getElementById('searchBtn').addEventListener('click', ()=>doSearch(1));
+  document.getElementById('qInput').addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); doSearch(1); } });
+
+  // Initialize from URL
+  const params=new URLSearchParams(window.location.search);
+  document.getElementById('qInput').value = params.get('q')||'';
+  document.getElementById('isrentalSelect').value = params.get('isrental')||'';
+  const {page} = getUrlParams(); doSearch(page);
+
+  // Set messages link and logout behavior based on token
+  (function(){
+    const token = localStorage.getItem('token');
+    const messagesLink = document.getElementById('messagesLink');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    function decodePayload(tok){
+      try{
+        const parts = tok.split('.'); if(parts.length<2) return null;
+        const payload = parts[1].replace(/-/g,'+').replace(/_/g,'/');
+        const json = decodeURIComponent(atob(payload).split('').map(function(c){ return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
+        return JSON.parse(json);
+      }catch(e){return null}
+    }
+
+    const settingsBtn = document.getElementById('settingsBtn');
+
+    if(messagesLink){
+      if(token){
+        const payload = decodePayload(token);
+        const role = payload && payload.role ? payload.role : '';
+        messagesLink.href = role === 'realtor' ? '/realtor-messages' : '/client-messages';
+        if(settingsBtn){ settingsBtn.style.display = ''; settingsBtn.href = role === 'realtor' ? '/realtor-settings' : '/settings'; }
+      } else {
+        messagesLink.href = '/login.html';
+        if(settingsBtn) settingsBtn.style.display = 'none';
+      }
+    }
+
+    if(logoutBtn){
+      logoutBtn.addEventListener('click', ()=>{ localStorage.removeItem('token'); window.location.href='/login.html'; });
+    }
+  })();
+</script>
+</body>
+</html>

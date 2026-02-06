@@ -14,7 +14,31 @@ body {
 
 .navbar {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  min-height:5%!important;height:50px!important;max-height: 5%!important;background: linear-gradient(135deg, #7492eb 0%, #8931e0 100%);
+  min-height: 5%!important;
+  height: 50px!important;
+  max-height: 5%!important;
+  color: white !important;
+  background: linear-gradient(135deg, #7492eb 0%, #aa5ff5 100%) !important;
+}
+
+/* Navbar link / brand colors and borders */
+.navbar a,
+.navbar .nav-link,
+.navbar .navbar-brand,
+.navbar .btn-outline-primary,
+.navbar .btn-outline-dark,
+.navbar .btn {
+  color: white !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.navbar a:hover,
+.navbar .nav-link:hover,
+.navbar .btn:hover {
+  color: white !important;
+  border: 0 !important;
+  background: transparent !important;
 }
 
 .navbar-brand {

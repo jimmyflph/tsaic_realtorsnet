@@ -19,14 +19,10 @@
     }
 
     /* NAV */
-    .navbar {
-      background: #ffffff;
-      border-bottom: 1px solid #eee;
-    }
 
     /* HERO */
     .hero {
-      background: linear-gradient(to right, #f9fafb, #ffffff);
+      background: linear-gradient(to right, rgba(249, 250, 251, 0.9), rgba(255, 255, 255, 0.9)), url('/images/map.jpg') center/cover no-repeat;
       padding: 90px 0;
     }
 
@@ -124,11 +120,11 @@
 <body>
 
 <!-- NAV -->
-<nav class="navbar navbar-expand-lg">
+<nav class="navbar navbar-expand-lg" style="color:white!important;background: linear-gradient(135deg, #7492eb 0%, #aa5ff5 100%) !important;">
   <div class="container">
-    <a class="navbar-brand fw-bold" href="/">AI Realty</a>
-    <div class="ms-auto">
-      <a href="/login.html" class="btn btn-outline-dark btn-sm">Login</a>
+    <a class="navbar-brand fw-bold" href="/" style="color:white!important;border-color:white!important;">AI Realty</a>
+    <div class="ms-auto d-flex align-items-center" style="gap:8px;">
+      <a href="/login.html" class="btn btn-sm" style="color:white!important;">Login</a>
     </div>
   </div>
 </nav>
@@ -150,9 +146,9 @@
         <!-- ⬇⬇⬇ LOGIN – ORIGINAL ELEMENTS PRESERVED ⬇⬇⬇ -->
         <div class="login-container">
           <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-6" style="width: 80%; margin-left: 2%;">
               <div class="card">
-                <div class="card-header bg-dark text-white">
+                <div class="card-header text-white" style="background-color: #667eea;">
                   <h3 class="mb-0">Login</h3>
                 </div>
                 <div class="card-body">
@@ -169,16 +165,8 @@
                       <input type="password" class="form-control" id="password" required>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                    <button type="submit" class="btn w-100" style="background-color: #667eea; color: white; border: none;">Login</button>
                   </form>
-
-                  <hr>
-
-                  <div class="alert alert-info" role="alert">
-                    <strong>Demo Credentials:</strong><br>
-                    <strong>Buyer:</strong> user1 / pass123<br>
-                    <strong>Realtor:</strong> user2 / pass123
-                  </div>
                 </div>
               </div>
             </div>
@@ -242,16 +230,16 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="color:white!important;background: linear-gradient(135deg, #7492eb 0%, #aa5ff5 100%) !important;">
     <div class="container">
-      <a class="navbar-brand" href="/">AI Realty</a>
+      <a class="navbar-brand" href="/" style="color:white!important;border-color:white!important;">AI Realty</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
       </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
+      <div class="collapse navbar-collapse" id="#navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item">
-            <a class="nav-link" href="/login.html">Login</a>
+            <a class="nav-link" href="#" id="logoutBtn" style="color:white!important;border-color:white!important;">Logout</a>
           </li>
         </ul>
       </div>

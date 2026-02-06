@@ -183,7 +183,10 @@ async function loadRealties() {
       return;
     }
 
-    realtyGallery.innerHTML = realties.map((r, i) => {
+    // Limit to maximum 12 cards
+    const limitedRealties = realties.slice(0, 12);
+
+    realtyGallery.innerHTML = limitedRealties.map((r, i) => {
       return `
       <div class="col-md-4 col-lg-3">
         <div class="realty-card">
@@ -438,17 +441,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
     loadRealties();
-    loadRealtorsList(5);
+    loadRealtorsList(3);
   }
 
   if (window.location.pathname === '/login.html' || window.location.pathname === '/login') {
     loadRealties();
-    loadRealtorsList(5);
+    loadRealtorsList(3);
+  }
+
+  if (window.location.pathname === '/register.html' || window.location.pathname === '/register') {
+    loadRealties();
+    loadRealtorsList(3);
+  }
+
+  if (window.location.pathname === '/realtor-register.html' || window.location.pathname === '/realtor-register') {
+    loadRealties();
+    loadRealtorsList(3);
   }
 
   if (window.location.pathname === '/client-home') {
     loadRealties();
-    loadRealtorsList(5);
+    loadRealtorsList(3);
   }
 
   if (window.location.pathname === '/realtor-realty' || window.location.pathname.includes('realtor-realty')) {
@@ -589,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loadPropertyDetails(propertyId);
       }
       loadRealties();
-      loadRealtorsList(5);
+      loadRealtorsList(3);
   }
 });
 

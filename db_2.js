@@ -176,6 +176,56 @@ async function getRealties() {
   return result.rows;
 }
 
+async function searchRealties(q, isrental, page = 1, limit = 12) {
+  const pool = getPool();
+  const offset = (page - 1) * limit;
+
+  // Build dynamic WHERE clauses
+  const where = [];
+  const params = [];
+  let idx = 1;
+
+  if (q) {
+    where.push(`(r.title ILIKE $${idx} OR r.description ILIKE $${idx} OR r.address ILIKE $${idx})`);
+    params.push(`%${q}%`);
+    idx++;
+  }
+
+  if (isrental !== undefined && isrental !== null && isrental !== '') {
+    // Expect 'true' or 'false' (string) or numeric 1/0
+    const val = (String(isrental).toLowerCase() === 'true' || String(isrental) === '1') ? true : false;
+    where.push(`r.isrental = $${idx}`);
+    params.push(val);
+    idx++;
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  // total count
+  const countSql = `SELECT COUNT(*) as total FROM realty r ${whereSql}`;
+  const countRes = await pool.query(countSql, params);
+  const totalRecords = parseInt(countRes.rows[0]?.total || 0);
+  const totalPages = Math.ceil(totalRecords / limit) || 1;
+
+  // results
+  const resultsSql = `SELECT 
+      r.id, r.title, r.description, r.isrental, r.price, r.amenities, r.address, r.realtor, r.images, r.created_at,
+      u.fullname AS realtor_fullname, u.email AS realtor_email, u.image AS realtor_image
+    FROM realty r
+    LEFT JOIN users u ON r.realtor = u.id
+    ${whereSql}
+    ORDER BY r.created_at DESC
+    LIMIT $${idx} OFFSET $${idx + 1}`;
+
+  params.push(limit, offset);
+
+  const res = await pool.query(resultsSql, params);
+  return {
+    realties: res.rows || [],
+    pagination: { page, limit, totalRecords, totalPages }
+  };
+}
+
 async function getRealtiesByRealtor(realtorId) {
   const pool = getPool();
   const result = await pool.query(
@@ -188,6 +238,7 @@ async function getRealtiesByRealtor(realtorId) {
       r.amenities, 
       r.address, 
       r.realtor,
+      r.images,
       r.created_at,
       u.fullname AS realtor_fullname,
       u.email AS realtor_email,
@@ -315,6 +366,15 @@ async function deleteProspect(id) {
   return res.rows[0] || null;
 }
 
+async function checkReviewExists(realtorId, buyerId) {
+  const pool = getPool();
+  const result = await pool.query(
+    `SELECT id FROM reviews WHERE realtor_id = $1 AND buyer_id = $2`,
+    [realtorId, buyerId]
+  );
+  return result.rows.length > 0;
+}
+
 async function createReview(realtorId, buyerId, rating, reviewText) {
   const pool = getPool();
   const result = await pool.query(
@@ -326,18 +386,40 @@ async function createReview(realtorId, buyerId, rating, reviewText) {
   return result.rows[0] || null;
 }
 
-async function getReviewsByRealtorId(realtorId) {
+
+async function getReviewsByRealtorId(realtorId, page = 1, limit = 10) {
   const pool = getPool();
+  const offset = (page - 1) * limit;
+  
+  // Get total count
+  const countResult = await pool.query(
+    `SELECT COUNT(*) as total FROM reviews WHERE realtor_id = $1`,
+    [realtorId]
+  );
+  const totalRecords = parseInt(countResult.rows[0]?.total || 0);
+  const totalPages = Math.ceil(totalRecords / limit);
+  
+  // Get paginated results
   const result = await pool.query(
     `SELECT r.id, r.realtor_id, r.buyer_id, r.rating, r.review, r.created_at,
             u.fullname AS buyer_name, u.image AS buyer_image
      FROM reviews r
      LEFT JOIN users u ON r.buyer_id = u.id
      WHERE r.realtor_id = $1
-     ORDER BY r.created_at DESC`,
-    [realtorId]
+     ORDER BY r.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [realtorId, limit, offset]
   );
-  return result.rows || [];
+  
+  return {
+    reviews: result.rows || [],
+    pagination: {
+      page,
+      limit,
+      totalRecords,
+      totalPages
+    }
+  };
 }
 
 async function getMessagesByUserId(userId, page = 1, limit = 10) {
@@ -478,6 +560,7 @@ module.exports = {
   getProspects,
   getProspectById,
   getRealties,
+  searchRealties,
   getRealtiesByRealtor,
   getRealtyById,
   createRealty,
@@ -487,6 +570,7 @@ module.exports = {
   getAllUsers,
   getUserById,
   deleteProspect,
+  checkReviewExists,
   createReview,
   getReviewsByRealtorId,
   getMessagesByUserId,

@@ -12,21 +12,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #ffffff;
-      color: #222;
-    }
-
-    /* NAV */
-    .navbar {
-      background: #ffffff;
-      border-bottom: 1px solid #eee;
-    }
-
     /* HERO */
     .hero {
-      background: linear-gradient(to right, #f9fafb, #ffffff);
+      background: linear-gradient(to right, rgba(249, 250, 251, 0.9), rgba(255, 255, 255, 0.9)), url('/images/map.jpg') center/cover no-repeat;
       padding: 90px 0;
     }
 
@@ -124,11 +112,12 @@
 <body>
 
 <!-- NAV -->
-<nav class="navbar navbar-expand-lg">
+<nav class="navbar navbar-expand-lg" style="color:white!important;background: linear-gradient(135deg, #7492eb 0%, #aa5ff5 100%) !important;">
   <div class="container">
-    <a class="navbar-brand fw-bold" href="/">AI Realty</a>
-    <div class="ms-auto">
-      <a href="/login.html" class="btn btn-outline-dark btn-sm">Login</a>
+    <a class="navbar-brand fw-bold" href="/" style="color:white!important;border-color:white!important;">AI Realty</a>
+    <div class="ms-auto d-flex align-items-center" style="gap:8px;">
+      <a href="/search-property" class="btn btn-sm" style="color:white!important;">Search</a>
+      <a href="/login.html" class="btn btn-sm" style="color:white!important;">Login</a>
     </div>
   </div>
 </nav>
@@ -223,16 +212,16 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="color:white!important;background: linear-gradient(135deg, #7492eb 0%, #aa5ff5 100%) !important;">
     <div class="container">
-      <a class="navbar-brand" href="/">AI Realty</a>
+      <a class="navbar-brand" href="/" style="color:white!important;border-color:white!important;">AI Realty</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item">
-            <a class="nav-link" href="/login.html">Login</a>
+            <a class="nav-link" href="/login.html" style="color:white!important;border-color:white!important;">Login</a>
           </li>
         </ul>
       </div>

@@ -30,6 +30,58 @@ function getContentType(filePath) {
   return types[ext] || 'application/octet-stream';
 }
 
+// Check if user is a realtor (for protecting realtor-only routes)
+// Check if user is a realtor (for protecting realtor-only routes)
+function checkRealtorAccess(req, res) {
+  try {
+    // Prefer Authorization header but fall back to server-set cookie `authToken`
+    let token = '';
+    const authHeader = req.headers.authorization || '';
+    if (authHeader) token = authHeader.replace('Bearer ', '').trim();
+
+    if (!token && req.headers.cookie) {
+      const cookies = req.headers.cookie.split(';').map(c => c.trim());
+      for (const c of cookies) {
+        if (c.startsWith('authToken=')) {
+          token = c.substring('authToken='.length);
+          break;
+        }
+      }
+    }
+
+    if (!token) {
+      serveUnauthorizedPage(res);
+      return false;
+    }
+
+    const decoded = auth.verifyToken(token);
+    if (!decoded || decoded.role !== 'realtor') {
+      serveUnauthorizedPage(res);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    serveUnauthorizedPage(res);
+    return false;
+  }
+}
+
+// Serve the unauthorized/403 error page
+function serveUnauthorizedPage(res) {
+  const filePath = path.join(PUBLIC_DIR, 'unauthorized.html');
+  fs.readFile(filePath, (err, content) => {
+    if (err) {
+      res.writeHead(403, { 'Content-Type': 'text/html' });
+      res.end('<h1>403 Forbidden</h1><p>Access Denied</p>');
+    } else {
+      res.writeHead(403, { 'Content-Type': 'text/html' });
+      res.end(content);
+    }
+  });
+}
+
+// Main request handler
 async function handleRequest(req, res) {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
@@ -52,7 +104,7 @@ async function handleRequest(req, res) {
     req.on('end', async () => {
       try {
        console.log("signup body:", body);
-        const { username, password, email, city } = JSON.parse(body);
+        const { username, password, email } = JSON.parse(body);
         role = "buyer";
 
         console.log(username, password, role);
@@ -424,6 +476,18 @@ async function handleRequest(req, res) {
         return;
       }
 
+      // If search query or isrental filter present, use searchRealties with pagination
+      if (query.q || query.isrental || query.page || query['max-items']) {
+        const page = Math.max(1, parseInt(query.page) || 1);
+        const maxItems = Math.max(1, parseInt(query['max-items']) || 12);
+        const q = query.q || '';
+        const isrental = query.isrental;
+        const data = await db2.searchRealties(q, isrental, page, maxItems);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+        return;
+      }
+
       const realties = await db2.getRealties();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(realties));
@@ -682,9 +746,13 @@ async function handleRequest(req, res) {
   if (realtorReviewMatch && req.method === 'GET') {
     try {
       const realtorId = parseInt(realtorReviewMatch[1]);
-      const reviews = await db2.getReviewsByRealtorId(realtorId);
+      const queryParams = new URLSearchParams(url.parse(req.url).query);
+      const page = Math.max(1, parseInt(queryParams.get('page')) || 1);
+      const maxItems = Math.max(1, parseInt(queryParams.get('maxItems')) || 10);
+      
+      const data = await db2.getReviewsByRealtorId(realtorId, page, maxItems);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(reviews));
+      res.end(JSON.stringify(data));
     } catch (error) {
       console.error('Error fetching reviews:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -709,6 +777,22 @@ async function handleRequest(req, res) {
     req.on('end', async () => {
       try {
         const realtorId = parseInt(realtorReviewMatch[1]);
+        
+        // Prevent realtor from reviewing themselves
+        if (user.id === realtorId) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'You cannot review yourself' }));
+          return;
+        }
+        
+        // Check if review already exists
+        const reviewExists = await db2.checkReviewExists(realtorId, user.id);
+        if (reviewExists) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'You have already reviewed this realtor' }));
+          return;
+        }
+
         const { rating, review } = JSON.parse(body || '{}');
         
         if (!rating) {
@@ -741,10 +825,10 @@ async function handleRequest(req, res) {
           return;
         }
 
-        // Get reviews for the logged-in realtor
-        const reviews = await db2.getReviewsByRealtorId(user.id);
+        // Get reviews for the logged-in realtor - fetch all without pagination for backward compatibility
+        const data = await db2.getReviewsByRealtorId(user.id, 1, 10000);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(reviews));
+        res.end(JSON.stringify(data.reviews));
       } catch (error) {
         console.error('Error fetching my reviews:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -951,6 +1035,22 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // Match /reviews/:id pattern (realtor reviews list)
+  const reviewsMatch = pathname.match(/^\/reviews\/(\d+)$/);
+  if (reviewsMatch) {
+    const filePath = path.join(PUBLIC_DIR, 'reviews.html');
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('<h1>404 Not Found</h1>');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+
   // Match /realtor-reviews pattern (reviews list for realtor)
   if (pathname === '/realtor-reviews') {
     const filePath = path.join(PUBLIC_DIR, 'realtor-reviews.html');
@@ -998,10 +1098,11 @@ async function handleRequest(req, res) {
     return;
   }
 
-  // Match /prospect-view/:id pattern
+  // Match /prospect-view/:id pattern (REALTOR ONLY)
   const prospectViewMatch = pathname.match(/^\/prospect-view\/(\d+)$/);
   if (prospectViewMatch) {
-    // Serve prospect-view.html for any /prospect-view/:id route
+    if (!checkRealtorAccess(req, res)) return;
+    
     const filePath = path.join(PUBLIC_DIR, 'prospect-view.html');
     fs.readFile(filePath, (err, content) => {
       if (err) {
@@ -1015,9 +1116,11 @@ async function handleRequest(req, res) {
     return;
   }
 
-  // Match /realtor-realty-form and /realtor-realty-form/:id
+  // Match /realtor-realty-form and /realtor-realty-form/:id (REALTOR ONLY)
   const realtorFormMatch = pathname.match(/^\/realtor-realty-form(?:\/(\d+))?$/);
   if (realtorFormMatch) {
+    if (!checkRealtorAccess(req, res)) return;
+    
     const filePath = path.join(PUBLIC_DIR, 'realtor-realty-form.html');
     fs.readFile(filePath, (err, content) => {
       if (err) {
@@ -1031,9 +1134,11 @@ async function handleRequest(req, res) {
     return;
   }
 
-  // Match /realtor-realty-delete/:id
+  // Match /realtor-realty-delete/:id (REALTOR ONLY)
   const realtorDeleteMatch = pathname.match(/^\/realtor-realty-delete\/(\d+)$/);
   if (realtorDeleteMatch) {
+    if (!checkRealtorAccess(req, res)) return;
+    
     const filePath = path.join(PUBLIC_DIR, 'realtor-realty-delete.html');
     fs.readFile(filePath, (err, content) => {
       if (err) {
@@ -1047,8 +1152,24 @@ async function handleRequest(req, res) {
     return;
   }
 
-  // Static file serving
+  // Static file serving with REALTOR-ONLY PAGE PROTECTION
   let filePath = pathname === '/' ? '/index.html' : pathname;
+  
+  // Check if this is a realtor-only page
+  const realtorOnlyPages = [
+    'realtor-home',
+    'realtor-prospects',
+    'realtor-realty',
+    'realtor-messages',
+    'realtor-my-reviews',
+    'prospect-create',
+    'realtor-reviews'
+  ];
+  
+  const isRealtorOnlyPage = realtorOnlyPages.some(page => filePath.includes(page));
+  if (isRealtorOnlyPage) {
+    if (!checkRealtorAccess(req, res)) return;
+  }
   
   // If the path doesn't have an extension, try appending .html
   if (!path.extname(filePath)) {
