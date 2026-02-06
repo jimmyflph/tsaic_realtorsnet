@@ -82,6 +82,38 @@ async function searchBuyersExcludeProspects(searchQuery, realtorId) {
   return filteredBuyers;
 }
 
+// Search all users (by name, email, or address) with optional exclusion of a user id
+// Supports simple pagination via page and maxItems. Returns up to maxItems+1 rows
+// so caller can detect whether there is a next page.
+async function searchUsers(searchQuery, excludeUserId = null, page = 1, maxItems = 50) {
+  const pool = getPool();
+  const q = `%${searchQuery}%`;
+  const offset = Math.max(0, (page - 1)) * Math.max(1, maxItems);
+  const fetchLimit = Math.max(1, maxItems) + 1; // fetch one extra to detect next page
+
+  let sql;
+  let params;
+
+  if (excludeUserId) {
+    sql = `SELECT id, fullname, email, address
+           FROM users
+           WHERE id <> $4 AND (LOWER(fullname) LIKE LOWER($1) OR LOWER(email) LIKE LOWER($1) OR LOWER(address) LIKE LOWER($1))
+           ORDER BY fullname NULLS LAST
+           LIMIT $2 OFFSET $3`;
+    params = [q, fetchLimit, offset, excludeUserId];
+  } else {
+    sql = `SELECT id, fullname, email, address
+           FROM users
+           WHERE (LOWER(fullname) LIKE LOWER($1) OR LOWER(email) LIKE LOWER($1) OR LOWER(address) LIKE LOWER($1))
+           ORDER BY fullname NULLS LAST
+           LIMIT $2 OFFSET $3`;
+    params = [q, fetchLimit, offset];
+  }
+
+  const res = await pool.query(sql, params);
+  return res.rows || [];
+}
+
 async function createProspect(fullname, email = null, status = 'Active', notes = '', realtor_id = 1) {
   const p = getPool();
   const res = await p.query(
@@ -308,8 +340,19 @@ async function getReviewsByRealtorId(realtorId) {
   return result.rows || [];
 }
 
-async function getMessagesByUserId(userId) {
+async function getMessagesByUserId(userId, page = 1, limit = 10) {
   const pool = getPool();
+  const offset = (page - 1) * limit;
+  
+  // Get total count
+  const countResult = await pool.query(
+    `SELECT COUNT(*) as total FROM messages WHERE message_to = $1`,
+    [userId]
+  );
+  const totalRecords = parseInt(countResult.rows[0].total) || 0;
+  const totalPages = Math.ceil(totalRecords / limit);
+  
+  // Get paginated results
   const result = await pool.query(
     `SELECT
         m.id AS message_id,
@@ -317,10 +360,12 @@ async function getMessagesByUserId(userId) {
         m.content,
         m.created_at,
         s.id AS sender_id,
+        s.username AS sender_username,
         s.fullname AS sender_fullname,
         s.email AS sender_email,
         s.role AS sender_role,
         r.id AS receiver_id,
+        r.username AS receiver_username,
         r.fullname AS receiver_fullname,
         r.email AS receiver_email,
         r.role AS receiver_role
@@ -328,10 +373,69 @@ async function getMessagesByUserId(userId) {
      JOIN users s ON m.message_from = s.id
      JOIN users r ON m.message_to = r.id
      WHERE m.message_to = $1
-     ORDER BY m.created_at DESC`,
+     ORDER BY m.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [userId, limit, offset]
+  );
+  
+  return {
+    messages: result.rows || [],
+    pagination: {
+      page: page,
+      limit: limit,
+      totalRecords: totalRecords,
+      totalPages: totalPages
+    }
+  };
+}
+
+async function getMessagesSentByUserId(userId, page = 1, limit = 10) {
+  const pool = getPool();
+  const offset = (page - 1) * limit;
+  
+  // Get total count
+  const countResult = await pool.query(
+    `SELECT COUNT(*) as total FROM messages WHERE message_from = $1`,
     [userId]
   );
-  return result.rows || [];
+  const totalRecords = parseInt(countResult.rows[0].total) || 0;
+  const totalPages = Math.ceil(totalRecords / limit);
+  
+  // Get paginated results
+  const result = await pool.query(
+    `SELECT
+        m.id AS message_id,
+        m.title,
+        m.content,
+        m.created_at,
+        s.id AS sender_id,
+        s.username AS sender_username,
+        s.fullname AS sender_fullname,
+        s.email AS sender_email,
+        s.role AS sender_role,
+        r.id AS receiver_id,
+        r.username AS receiver_username,
+        r.fullname AS receiver_fullname,
+        r.email AS receiver_email,
+        r.role AS receiver_role
+     FROM messages m
+     JOIN users s ON m.message_from = s.id
+     JOIN users r ON m.message_to = r.id
+     WHERE m.message_from = $1
+     ORDER BY m.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [userId, limit, offset]
+  );
+  
+  return {
+    messages: result.rows || [],
+    pagination: {
+      page: page,
+      limit: limit,
+      totalRecords: totalRecords,
+      totalPages: totalPages
+    }
+  };
 }
 
 async function createMessage(messageFrom, messageTo, title, content) {
@@ -368,6 +472,7 @@ module.exports = {
   createUser,
   searchBuyers,
   searchBuyersExcludeProspects,
+  searchUsers,
   createProspect,
   linkUserProspect,
   getProspects,
@@ -385,6 +490,7 @@ module.exports = {
   createReview,
   getReviewsByRealtorId,
   getMessagesByUserId,
+  getMessagesSentByUserId,
   createMessage,
   deleteMessage,
   closeDB

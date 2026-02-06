@@ -7,40 +7,29 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .form-container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 30px 20px;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    .btn-submit {
-      background-color: #222;
-      color: white;
-      border: none;
-      padding: 10px 25px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .btn-submit:hover {
-      background-color: #444;
-      color: white;
-    }
-    .btn-cancel {
-      background-color: transparent;
-      color: #222;
-      border: 1px solid #222;
-      padding: 10px 25px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 600;
-      margin-left: 10px;
-    }
-    .btn-cancel:hover {
-      background-color: #f0f0f0;
-    }
+    body { font-family: 'Inter', sans-serif; background: #ffffff; color: #222; }
+    .card-section { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { font-weight: 600; color: #667eea; margin-bottom: 6px; display:block; }
+    .form-control { border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; }
+    .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.08); }
+    .section-title { font-size: 1.1rem; font-weight: 700; color: #222; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #667eea; }
+    .button-group { display:flex; gap:10px; margin-top:12px; }
+    .btn-submit { background: #667eea; color: white; padding: 10px 20px; border-radius: 6px; border: none; font-weight:600; cursor: pointer; }
+    .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-cancel { background: #f0f1ff; color: #667eea; padding: 10px 20px; border-radius: 6px; border: none; font-weight:600; text-decoration:none; cursor: pointer; }
+    .btn-cancel:hover { background: #e6e8ff; }
+    #searchResults { margin-top: 12px; }
+    .result-item { padding:10px; border:1px solid #eee; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+    .pager { display:flex; gap:8px; align-items:center; margin-top:8px; }
+    .pager button { background:transparent; border:none; color:#667eea; padding:6px 10px; cursor:pointer; font-weight:600; }
+    .pager button:disabled { color:#ccc; cursor:default; }
+    #formSection { display:none; }
+    #formSection.disabled-card { opacity: 0.5; pointer-events: none; background: #f5f5f5; }
+    .form-container { max-width: 1200px; margin: 0 auto; }
+    .recipient-box { background:#fff; border:1px solid #e9eefb; padding:12px 16px; border-radius:8px; }
+    @media (max-width: 768px) { .two-column { grid-template-columns: 1fr; gap: 20px; } }
   </style>
 </head>
 <body>
@@ -82,36 +71,45 @@
   <section class="py-5 bg-light" style="min-height: calc(100vh - 56px);">
     <div class="form-container">
       <h2 class="mb-4">Send a Message</h2>
+      <div id="alertContainer"></div>
+      <form id="sendMessageForm" class="two-column">
+        <div id="searchSection" class="card-section">
+            <h4 class="section-title">Step 1: Search for Recipient</h4>
+            <div class="form-group">
+              <label for="searchQuery">Search by Name, Email, or City *</label>
+              <input type="text" class="form-control" id="searchQuery" placeholder="e.g., Jane Doe, jane@email.com, or Boston" required />
+            </div>
 
-      <form id="sendMessageForm">
-        <div class="form-group">
-          <label for="recipientSelect" class="form-label">Recipient</label>
-          <select id="recipientSelect" class="form-select" required>
-            <option value="">Choose a recipient...</option>
-          </select>
-          <small class="text-muted">Select who you want to message</small>
-        </div>
+            <div class="button-group">
+              <button type="button" class="btn-submit" id="searchBtn">Search Users</button>
+              <a href="/realtor-messages" class="btn-cancel">Cancel</a>
+            </div>
 
-        <div class="form-group">
-          <label for="messageTitle" class="form-label">Subject</label>
-          <input type="text" class="form-control" id="messageTitle" placeholder="Message subject" required />
-        </div>
+            <div id="searchResults"></div>
+          </div>
 
-        <div class="form-group">
-          <label for="messageContent" class="form-label">Message</label>
-          <textarea
-            class="form-control"
-            id="messageContent"
-            rows="6"
-            placeholder="Type your message here..."
-            required
-          ></textarea>
-        </div>
+        <div id="formSection" class="card-section">
+            <h4 class="section-title">Step 2: Compose Message</h4>
 
-        <div class="d-flex justify-content-start">
-          <button type="submit" class="btn-submit">Send Message</button>
-          <a href="/realtor-messages" class="btn-cancel">Cancel</a>
-        </div>
+            <div id="recipientInfo" class="recipient-box" style="margin-bottom:12px;">No recipients selected</div>
+
+            <div class="form-group">
+              <label for="messageTitle">Subject</label>
+              <input type="text" class="form-control" id="messageTitle" placeholder="Message subject" required />
+            </div>
+
+            <div class="form-group">
+              <label for="messageContent">Message</label>
+              <textarea class="form-control" id="messageContent" rows="6" placeholder="Type your message here..." required></textarea>
+            </div>
+
+            <div class="button-group">
+              <button type="submit" class="btn-submit" id="sendBtn">Send Message</button>
+              <a href="/realtor-messages" class="btn-cancel">Cancel</a>
+            </div>
+
+            <div id="selectedRecipientsForm" style="padding:8px; background:#f9fafb; border-radius:6px; border:1px solid #eee; margin-top:12px; display:none;"></div>
+          </div>
       </form>
     </div>
   </section>
@@ -119,76 +117,255 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
   <script src="app.js"></script>
   <script>
-    // Load recipients when page loads
-    document.addEventListener('DOMContentLoaded', async () => {
-      await loadRecipients();
-      
-      // Handle form submission
+    let selectedRecipients = []; // array of {id, fullname, email}
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showAlert(message, type = 'danger') {
+      const alertContainer = document.getElementById('alertContainer');
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type}`;
+      alertDiv.textContent = message;
+      alertContainer.innerHTML = '';
+      alertContainer.appendChild(alertDiv);
+    }
+
+    const PAGINATION_MAX = 50;
+    let currentPage = 1;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('searchBtn').addEventListener('click', () => handleSearch(1));
       document.getElementById('sendMessageForm').addEventListener('submit', handleSendMessage);
     });
 
-    async function loadRecipients() {
-      const select = document.getElementById('recipientSelect');
-      try {
-        const response = await fetch(`${API_URL}/api/users`, {
-          headers: { 'Authorization': `Bearer ${getToken()}` }
-        });
-
-        if (response.ok) {
-          const users = await response.json();
-          // Filter out current user
-          const currentUserId = JSON.parse(localStorage.getItem('user')).id;
-          const filteredUsers = users.filter(u => u.id !== currentUserId);
-
-          filteredUsers.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.id;
-            option.textContent = user.fullname || user.email;
-            select.appendChild(option);
-          });
-        }
-      } catch (error) {
-        console.error('Error loading recipients:', error);
-      }
-    }
-
-    async function handleSendMessage(e) {
-      e.preventDefault();
-
-      const recipientId = parseInt(document.getElementById('recipientSelect').value);
-      const title = document.getElementById('messageTitle').value;
-      const content = document.getElementById('messageContent').value;
-
-      if (!recipientId || !title || !content) {
-        alert('Please fill in all fields');
+    async function handleSearch(page = 1) {
+      const searchQuery = document.getElementById('searchQuery').value.trim();
+      if (!searchQuery) {
+        showAlert('Please enter a search term');
         return;
       }
 
       try {
-        const response = await fetch(`${API_URL}/api/messages`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`
-          },
-          body: JSON.stringify({
-            messageTo: recipientId,
-            title: title,
-            content: content
-          })
+        // clear previous alerts
+        document.getElementById('alertContainer').innerHTML = '';
+        // disable search button while fetching
+        const searchBtn = document.getElementById('searchBtn');
+        searchBtn.disabled = true;
+        const resp = await fetch(`${API_URL}/api/search-users?q=${encodeURIComponent(searchQuery)}&page=${page}&maxItems=${PAGINATION_MAX}`, {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
         });
 
-        if (response.ok) {
-          alert('Message sent successfully!');
-          window.location.href = '/realtor-messages';
-        } else {
-          alert('Failed to send message');
+        if (resp.status === 401) {
+          window.location.href = '/login';
+          return;
         }
-      } catch (error) {
-        console.error('Error sending message:', error);
-        alert('Error sending message');
+
+        if (!resp.ok) {
+          showAlert('Error searching users');
+          return;
+        }
+
+        const data = await resp.json();
+        const users = data.users || [];
+        const pagination = data.pagination || { page: page, maxItems: PAGINATION_MAX, hasNextPage: users.length > PAGINATION_MAX };
+        currentPage = pagination.page || page;
+        renderSearchResults(users, pagination);
+      } catch (err) {
+        console.error('Search error', err);
+        showAlert('Error searching users');
+      } finally {
+        // re-enable search button
+        document.getElementById('searchBtn').disabled = false;
       }
     }
-  </script>
-</body>
-</html>
+
+    function renderSearchResults(users, pagination = {}) {
+      const container = document.getElementById('searchResults');
+      container.innerHTML = '';
+      if (!users || users.length === 0) {
+        container.innerHTML = '<div class="info-text">No users found</div>';
+        return;
+      }
+
+      users.forEach(u => {
+        const item = document.createElement('div');
+        item.className = 'result-item';
+        item.setAttribute('data-user-id', u.id);
+        const isSelected = selectedRecipients.find(s => s.id === u.id);
+        item.innerHTML = `
+          <div>
+            <div class="fw-bold">${u.fullname || u.username || ''}</div>
+          </div>
+          <div>
+            <button class="btn btn-sm select-btn ${isSelected ? 'btn-secondary' : 'btn-primary'}">${isSelected ? 'Remove' : 'Add'}</button>
+          </div>
+        `;
+        const btn = item.querySelector('.select-btn');
+        btn.addEventListener('click', () => toggleRecipient(u, btn));
+        container.appendChild(item);
+      });
+
+      // Pagination controls
+      const pager = document.createElement('div');
+      pager.className = 'pager';
+
+      const prev = document.createElement('button');
+      prev.textContent = 'Prev';
+      prev.disabled = (pagination.page || currentPage) <= 1;
+      prev.addEventListener('click', () => handleSearch((pagination.page || currentPage) - 1));
+
+      const pageInfo = document.createElement('div');
+      pageInfo.textContent = `Page ${pagination.page || currentPage}`;
+
+      const next = document.createElement('button');
+      next.textContent = 'Next';
+      next.disabled = !pagination.hasNextPage;
+      next.addEventListener('click', () => handleSearch((pagination.page || currentPage) + 1));
+
+      pager.appendChild(prev);
+      pager.appendChild(pageInfo);
+      pager.appendChild(next);
+      container.appendChild(pager);
+
+      renderSelectedRecipients();
+    }
+
+    // render selected recipients as chips and update recipient info box
+    function renderSelectedRecipients() {
+      let sel = document.getElementById('selectedRecipients');
+      if (!sel) {
+        sel = document.createElement('div');
+        sel.id = 'selectedRecipients';
+        sel.style.marginTop = '12px';
+        document.getElementById('searchSection').appendChild(sel);
+      }
+      sel.innerHTML = '';
+      
+      // Also update form section display
+      const formDisplay = document.getElementById('selectedRecipientsForm');
+      const recipientInfo = document.getElementById('recipientInfo');
+      if (formDisplay) {
+        formDisplay.innerHTML = '';
+      }
+      
+      const formSection = document.getElementById('formSection');
+      const sendBtn = document.getElementById('sendBtn');
+
+      if (selectedRecipients.length === 0) {
+        sel.innerHTML = '<div class="text-muted">No recipients selected</div>';
+        if (formDisplay) formDisplay.innerHTML = '';
+        if (recipientInfo) recipientInfo.textContent = 'No recipients selected';
+        formSection.style.display = 'block';
+        formSection.classList.add('disabled-card');
+        if (sendBtn) sendBtn.disabled = true;
+        return;
+      }
+
+      // There are recipients — enable the form
+      formSection.classList.remove('disabled-card');
+      if (sendBtn) sendBtn.disabled = false;
+
+      // Build recipient list for display
+      const names = selectedRecipients.map(r => escapeHtml(r.fullname || r.email));
+      if (recipientInfo) recipientInfo.innerHTML = `<strong>${names.slice(0,3).join(', ')}${names.length>3 ? ' and ' + (names.length-3) + ' more' : ''}</strong>`;
+
+      selectedRecipients.forEach(r => {
+        const chip = document.createElement('span');
+        chip.className = 'badge rounded-pill bg-light text-dark me-2 mb-2';
+        chip.style.padding = '8px 10px';
+        chip.style.border = '1px solid #eee';
+        chip.style.display = 'inline-block';
+        chip.innerHTML = `${escapeHtml(r.fullname || r.email)} <button type="button" class="btn-close btn-close-white ms-2" aria-label="Remove" style="opacity:0.6"></button>`;
+        chip.querySelector('button').addEventListener('click', () => removeRecipient(r.id));
+        sel.appendChild(chip);
+        
+        // also add to form display
+        if (formDisplay) {
+          const formChip = chip.cloneNode(true);
+          formChip.querySelector('button').addEventListener('click', () => removeRecipient(r.id));
+          formDisplay.appendChild(formChip);
+        }
+      });
+
+      // show form section when there are recipients
+      document.getElementById('formSection').style.display = 'block';
+    }
+
+    function toggleRecipient(user, btn) {
+      const idx = selectedRecipients.findIndex(s => s.id === user.id);
+      if (idx === -1) {
+        selectedRecipients.push({ id: user.id, fullname: user.fullname, email: user.email });
+        btn.textContent = 'Remove';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-secondary');
+      } else {
+        selectedRecipients.splice(idx, 1);
+        btn.textContent = 'Add';
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-primary');
+      }
+      renderSelectedRecipients();
+    }
+
+    function removeRecipient(id) {
+      const idx = selectedRecipients.findIndex(s => s.id === id);
+      if (idx !== -1) selectedRecipients.splice(idx, 1);
+      renderSelectedRecipients();
+      // refresh search results buttons state - update all buttons to match current selection
+      document.querySelectorAll('.result-item').forEach(node => {
+        const btn = node.querySelector('.select-btn');
+        const recipientId = parseInt(node.getAttribute('data-user-id') || '0');
+        const isSelected = selectedRecipients.find(s => s.id === recipientId);
+        if (btn) {
+          btn.textContent = isSelected ? 'Remove' : 'Add';
+          btn.classList.toggle('btn-primary', !isSelected);
+          btn.classList.toggle('btn-secondary', isSelected);
+        }
+      });
+    }
+
+    async function handleSendMessage(e) {
+      e.preventDefault();
+      if (!selectedRecipients || selectedRecipients.length === 0) {
+        showAlert('Please add at least one recipient');
+        return;
+      }
+      const title = document.getElementById('messageTitle').value.trim();
+      const content = document.getElementById('messageContent').value.trim();
+      if (!title || !content) {
+        showAlert('Please enter subject and message');
+        return;
+      }
+
+      try {
+        // send one POST per recipient
+        const promises = selectedRecipients.map(r => {
+          return fetch(`${API_URL}/api/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({ messageTo: r.id, title, content })
+          }).then(resp => ({ resp, id: r.id }));
+        });
+
+        const results = await Promise.all(promises);
+        const failed = results.filter(r => !r.resp.ok);
+        if (failed.length === 0) {
+          window.location.href = '/realtor-messages';
+        } else {
+          showAlert(`Failed to send to ${failed.length} recipient(s)`);
+        }
+      } catch (err) {
+        console.error('Error sending', err);
+        showAlert('Error sending message');
+      }
+    }
+   </script>
+ </body>
+ </html>

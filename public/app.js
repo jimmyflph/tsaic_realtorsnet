@@ -621,6 +621,9 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = messages.map(m => {
           const createdAt = new Date(m.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
           const escapedContent = (m.content || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+          const escapedTitle = (m.title || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+          const escapedSender = (m.sender_fullname || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+          const escapedSenderUsername = (m.sender_username || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
           return `
             <tr>
               <td>${m.sender_fullname || 'Unknown'}</td>
@@ -628,7 +631,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <td>${m.content.substring(0, 60)}...</td>
               <td>${createdAt}</td>
               <td>
-                <button class="btn-action" onclick="viewMessage('${m.title}', '${escapedContent}')">View</button>
+                <button class="btn-action" onclick="viewMessage('${escapedTitle}', '${escapedContent}', '${escapedSender}', '${escapedSenderUsername}')">View</button>
                 <button class="btn-action" onclick="deleteMessage(${m.message_id})">Delete</button>
               </td>
             </tr>
@@ -660,7 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    function viewMessage(title, content) {
+    function viewMessage(title, content, senderFullname = '', senderUsername = '') {
       // Check if modal already exists, if so remove it
       const existingModal = document.getElementById('messageModal');
       if (existingModal) {
@@ -677,9 +680,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
-                <p>${content}</p>
+                <div class="mb-3">
+                  <strong>From:</strong> ${senderFullname || 'Unknown'}
+                  <small class="text-muted">@${senderUsername || ''}</small>
+                </div>
+                <hr />
+                <div class="message-content">${content}</div>
               </div>
               <div class="modal-footer">
+                <a href="/reply-message?recipient=${encodeURIComponent(senderUsername || '')}" class="btn btn-primary">Reply</a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
               </div>
             </div>

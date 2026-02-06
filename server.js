@@ -618,6 +618,31 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // API: get user by username (public, for reply page)
+  if (pathname === '/api/user' && req.method === 'GET') {
+    try {
+      const username = parsedUrl.query.username;
+      if (!username) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'username is required' }));
+        return;
+      }
+      const user = await db2.getUserByUsername(username);
+      if (!user) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'User not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ id: user.id, username: user.username, fullname: user.fullname, email: user.email }));
+    } catch (err) {
+      console.error('Error fetching user by username:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server error' }));
+    }
+    return;
+  }
+
   // API: list realtors
   if (pathname === '/api/realtors' && req.method === 'GET') {
     try {
@@ -740,12 +765,46 @@ async function handleRequest(req, res) {
           return;
         }
 
+        // Get query parameters for pagination
+        const urlObj = new URL(req.url, `http://${req.headers.host}`);
+        const page = Math.max(1, parseInt(urlObj.searchParams.get('page')) || 1);
+        const maxItems = Math.max(1, parseInt(urlObj.searchParams.get('maxItems')) || 10);
+
         // Get messages for the logged-in user
-        const messages = await db2.getMessagesByUserId(user.id);
+        const data = await db2.getMessagesByUserId(user.id, page, maxItems);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(messages));
+        res.end(JSON.stringify(data));
       } catch (error) {
         console.error('Error fetching messages:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+      return;
+    }
+
+    // API: get sent messages by logged-in user
+    if (pathname === '/api/my-sent-messages' && req.method === 'GET') {
+      try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        const user = auth.verifyToken(token);
+
+        if (!user) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized' }));
+          return;
+        }
+
+        // Get query parameters for pagination
+        const urlObj = new URL(req.url, `http://${req.headers.host}`);
+        const page = Math.max(1, parseInt(urlObj.searchParams.get('page')) || 1);
+        const maxItems = Math.max(1, parseInt(urlObj.searchParams.get('maxItems')) || 10);
+
+        // Get sent messages by the logged-in user
+        const data = await db2.getMessagesSentByUserId(user.id, page, maxItems);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+      } catch (error) {
+        console.error('Error fetching sent messages:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Server error' }));
       }
@@ -829,6 +888,47 @@ async function handleRequest(req, res) {
         res.end(JSON.stringify(users));
       } catch (error) {
         console.error('Error fetching users:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+      return;
+    }
+
+    // SEARCH users by name, email, or city (for message recipient search)
+    if (pathname === '/api/search-users' && req.method === 'GET') {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      const user = auth.verifyToken(token);
+
+      if (!user) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+
+      try {
+        const searchQuery = parsedUrl.query.q;
+
+        if (!searchQuery) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Search query is required' }));
+          return;
+        }
+
+        // Parse pagination params (defaults: page 1, maxItems 10)
+        const page = parseInt(parsedUrl.query.page) || 1;
+        const maxItems = parseInt(parsedUrl.query.maxItems) || 50;
+
+        // Use DB-level search function (searchUsers) and exclude the current user
+        const rows = await db2.searchUsers(searchQuery, user.id, page, maxItems);
+
+        // Detect if there is a next page by checking whether we fetched more than maxItems
+        const hasNextPage = rows.length > maxItems;
+        const users = hasNextPage ? rows.slice(0, maxItems) : rows;
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ users, pagination: { page, maxItems, hasNextPage } }));
+      } catch (error) {
+        console.error('Error searching users:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Server error' }));
       }

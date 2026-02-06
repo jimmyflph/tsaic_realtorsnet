@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Messages - AI Realty</title>
+  <title>Sent Messages - AI Realty</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -42,10 +42,10 @@
   <div class="container">
     <div class="page-header">
       <div class="page-header-left">
-        <h1>Inbox</h1>
+        <h1>Sent</h1>
       </div>
       <div class="page-header-right">
-        <a href="/realtor-sent" class="btn btn-dark btn-sm">Sent</a>
+        <a href="/realtor-messages" class="btn btn-dark btn-sm">Inbox</a>
         <a href="/send-message" class="btn btn-dark btn-sm">+ Send</a>
         <a href="/realtor-home" class="btn btn-outline-dark btn-sm">Back</a>
       </div>
@@ -57,7 +57,7 @@
           <table class="table table-striped table-hover">
             <thead>
               <tr>
-                <th id="contactHeader">Sender</th>
+                <th id="contactHeader">Receiver</th>
                 <th>Title</th>
                 <th>Message</th>
                 <th>Date</th>
@@ -117,11 +117,10 @@
     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
   }
 
-  let currentTab = 'received';
   let paginationData = { totalPages: 1, totalRecords: 0 };
 
-  async function loadMessages(tab, page = 1) {
-    const endpoint = '/api/messages';
+  async function loadMessages(page = 1) {
+    const endpoint = '/api/my-sent-messages';
     const { maxItems } = getUrlParams();
     const messagesTable = document.getElementById('messagesTable');
     const contactHeader = document.getElementById('contactHeader');
@@ -141,15 +140,15 @@
       const messages = Array.isArray(data) ? data : (data.messages || []);
       paginationData = data.pagination || { page, maxItems, totalRecords: messages.length, totalPages: 1 };
 
-      // Keep as inbox only
-      contactHeader.textContent = 'Sender';
+      // Always show "Receiver" for sent messages
+      contactHeader.textContent = 'Receiver';
 
       // Render message rows
       if (messages.length === 0) {
         messagesTable.innerHTML = '<tr><td colspan="5" class="text-center">No messages</td></tr>';
       } else {
         messagesTable.innerHTML = messages.map(msg => {
-          const contactName = tab === 'received' ? msg.sender_fullname : msg.receiver_fullname;
+          const contactName = msg.receiver_fullname;
           const date = new Date(msg.created_at).toLocaleDateString();
           const contentPreview = msg.content.substring(0, 50) + (msg.content.length > 50 ? '...' : '');
           return `
@@ -171,7 +170,6 @@
       renderPaginationControls(page, maxItems, paginationData.totalPages);
       updateRecordInfo(page, maxItems, paginationData.totalRecords);
 
-      currentTab = 'received';
       updateUrlParams(page, maxItems);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -181,7 +179,7 @@
 
   function viewMessageModal(messageId) {
     // Find the message in the current loaded data
-    const endpoint = '/api/messages';
+    const endpoint = '/api/my-sent-messages';
     const { page, maxItems } = getUrlParams();
     
     fetch(`${endpoint}?page=${page}&maxItems=${maxItems}`, {
@@ -194,9 +192,9 @@
       
       if (message) {
         // Use the global viewMessage function from app.js to display modal with sender info
-        const senderName = message.sender_fullname || '';
-        const senderUsername = message.sender_username || message.sender_email || '';
-        window.viewMessage(escapeHtml(message.title), escapeHtml(message.content), escapeHtml(senderName), escapeHtml(senderUsername));
+        const receiverName = message.receiver_fullname || '';
+        const receiverUsername = message.receiver_username || message.receiver_email || '';
+        window.viewMessage(escapeHtml(message.title), escapeHtml(message.content), escapeHtml(receiverName), escapeHtml(receiverUsername));
       } else {
         alert('Message not found');
       }
@@ -281,14 +279,14 @@
     document.getElementById('paginationControls').innerHTML = paginationHTML.join('');
   }
 
-  // Load inbox messages on page load with query params
+  // Load sent messages on page load with query params
   window.addEventListener('popstate', () => {
     const { page } = getUrlParams();
-    loadMessages('received', page);
+    loadMessages(page);
   });
 
   const { page } = getUrlParams();
-  loadMessages('received', page);
+  loadMessages(page);
 </script>
 </body>
 </html>
