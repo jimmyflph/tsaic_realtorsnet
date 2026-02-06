@@ -26,8 +26,6 @@ function getPool() {
 async function getUserByUsername(username) {
   try {
     console.log('Getting user by username:', username);
-    console.log('Getting user by username:', username);
-    console.log('Getting user by username:', username);
     const p = getPool();
     const res = await p.query('SELECT id, username, password, role, fullname, email, address FROM users WHERE username = $1', [username]);
     return res.rows[0] || null;
@@ -35,9 +33,6 @@ async function getUserByUsername(username) {
     console.error('Error in getUserByUsername:', err);
     throw err;
   }
-  const p = getPool();
-  const res = await p.query('SELECT id, username, password, role, fullname, email, address FROM users WHERE username = $1', [username]);
-  return res.rows[0] || null;
 }
 
 async function createUser(username, password, role = 'realtor') {
@@ -67,15 +62,10 @@ async function searchBuyers(searchQuery) {
 async function searchBuyersExcludeProspects(searchQuery, realtorId) {
   const p = getPool();
   const q = `%${searchQuery}%`;
-  
-  // First, get all user IDs that are already prospects for this realtor
-  const prospectRes = await p.query(
-    'SELECT DISTINCT userid FROM prospects WHERE realtor = $1',
-    [realtorId]
-  );
+
+  const prospectRes = await p.query('SELECT DISTINCT userid FROM prospects WHERE realtor = $1', [realtorId]);
   const prospectUserIds = prospectRes.rows.map(row => row.userid);
-  
-  // Search for buyers matching the query
+
   const buyersRes = await p.query(
     `SELECT id, fullname, email, address 
      FROM users
@@ -87,24 +77,26 @@ async function searchBuyersExcludeProspects(searchQuery, realtorId) {
      LIMIT 50`,
     [q]
   );
-  
-  // Filter out buyers who are already prospects for this realtor
+
   const filteredBuyers = buyersRes.rows.filter(buyer => !prospectUserIds.includes(buyer.id));
   return filteredBuyers;
 }
 
-async function createProspect(fullname, email = null, status = 'Active', notes = '', realtor_id = 1) { 
-  
+async function createProspect(fullname, email = null, status = 'Active', notes = '', realtor_id = 1) {
+  const p = getPool();
+  const res = await p.query(
+    'INSERT INTO prospects (userid, notes, status, realtor) VALUES ($1, $2, $3, $4) RETURNING id, userid, notes, status, realtor, created_at, updated_at',
+    [null, notes, status, realtor_id]
+  );
+  return res.rows[0] || null;
 }
 
 async function linkUserProspect(userId, notes = '', status = 'Active', realtorId = 1) {
   const p = getPool();
-  
   const res = await p.query(
     'INSERT INTO prospects (userid, notes, status, realtor) VALUES ($1, $2, $3, $4) RETURNING id, userid, notes, status, realtor, created_at, updated_at',
     [userId, notes, status, realtorId]
   );
-  
   return res.rows[0];
 }
 
@@ -130,25 +122,25 @@ async function getProspects(realtorId = 1, page = 1, maxItems = 10) {
 
 async function getRealties() {
   const pool = getPool();
-    const result = await pool.query(
-      `SELECT 
-        r.id, 
-        r.title, 
-        r.description, 
-        r.isrental, 
-        r.price, 
-        r.amenities, 
-        r.address, 
-        r.realtor,
-        r.images,
-        r.created_at,
-        u.fullname AS realtor_fullname,
-          u.email AS realtor_email,
-          u.image AS realtor_image
-      FROM realty r
-      LEFT JOIN users u ON r.realtor = u.id
-      ORDER BY r.created_at DESC`
-    );
+  const result = await pool.query(
+    `SELECT 
+      r.id, 
+      r.title, 
+      r.description, 
+      r.isrental, 
+      r.price, 
+      r.amenities, 
+      r.address, 
+      r.realtor,
+      r.images,
+      r.created_at,
+      u.fullname AS realtor_fullname,
+      u.email AS realtor_email,
+      u.image AS realtor_image
+    FROM realty r
+    LEFT JOIN users u ON r.realtor = u.id
+    ORDER BY r.created_at DESC`
+  );
   return result.rows;
 }
 
@@ -179,26 +171,26 @@ async function getRealtiesByRealtor(realtorId) {
 
 async function getRealtyById(id) {
   const pool = getPool();
-    const result = await pool.query(
-      `SELECT 
-        r.id, 
-        r.title, 
-        r.description, 
-        r.isrental, 
-        r.price, 
-        r.amenities, 
-        r.address, 
-        r.created_at,
-        r.realtor,
-        r.images,
-        u.fullname AS realtor_fullname,
-        u.email AS realtor_email,
-        u.image AS realtor_image
-      FROM realty r
-      LEFT JOIN users u ON r.realtor = u.id
-      WHERE r.id = $1`,
-      [id]
-    );
+  const result = await pool.query(
+    `SELECT 
+      r.id, 
+      r.title, 
+      r.description, 
+      r.isrental, 
+      r.price, 
+      r.amenities, 
+      r.address, 
+      r.created_at,
+      r.realtor,
+      r.images,
+      u.fullname AS realtor_fullname,
+      u.email AS realtor_email,
+      u.image AS realtor_image
+    FROM realty r
+    LEFT JOIN users u ON r.realtor = u.id
+    WHERE r.id = $1`,
+    [id]
+  );
   return result.rows[0] || null;
 }
 
@@ -236,7 +228,6 @@ async function deleteRealty(id) {
   return result.rows[0] || null;
 }
 
-// Get all realtors (users with role = 'realtor')
 async function getRealtors(limit = 100) {
   const pool = getPool();
   const result = await pool.query(
@@ -250,7 +241,18 @@ async function getRealtors(limit = 100) {
   return result.rows || [];
 }
 
-// Get user by id
+async function getAllUsers(limit = 100) {
+  const pool = getPool();
+  const result = await pool.query(
+    `SELECT id, username, fullname, email, address, image, created_at, role
+     FROM users
+     ORDER BY created_at DESC
+     LIMIT $1`,
+    [limit]
+  );
+  return result.rows || [];
+}
+
 async function getUserById(id) {
   const pool = getPool();
   const result = await pool.query(
@@ -281,7 +283,6 @@ async function deleteProspect(id) {
   return res.rows[0] || null;
 }
 
-// Reviews functions
 async function createReview(realtorId, buyerId, rating, reviewText) {
   const pool = getPool();
   const result = await pool.query(
@@ -305,6 +306,52 @@ async function getReviewsByRealtorId(realtorId) {
     [realtorId]
   );
   return result.rows || [];
+}
+
+async function getMessagesByUserId(userId) {
+  const pool = getPool();
+  const result = await pool.query(
+    `SELECT
+        m.id AS message_id,
+        m.title,
+        m.content,
+        m.created_at,
+        s.id AS sender_id,
+        s.fullname AS sender_fullname,
+        s.email AS sender_email,
+        s.role AS sender_role,
+        r.id AS receiver_id,
+        r.fullname AS receiver_fullname,
+        r.email AS receiver_email,
+        r.role AS receiver_role
+     FROM messages m
+     JOIN users s ON m.message_from = s.id
+     JOIN users r ON m.message_to = r.id
+     WHERE m.message_to = $1
+     ORDER BY m.created_at DESC`,
+    [userId]
+  );
+  return result.rows || [];
+}
+
+async function createMessage(messageFrom, messageTo, title, content) {
+  const pool = getPool();
+  const result = await pool.query(
+    `INSERT INTO messages (message_from, message_to, title, content)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, message_from, message_to, title, content, created_at`,
+    [messageFrom, messageTo, title, content]
+  );
+  return result.rows[0] || null;
+}
+
+async function deleteMessage(messageId) {
+  const pool = getPool();
+  const result = await pool.query(
+    `DELETE FROM messages WHERE id = $1 RETURNING id`,
+    [messageId]
+  );
+  return result.rows[0] || null;
 }
 
 async function closeDB() {
@@ -332,9 +379,13 @@ module.exports = {
   updateRealty,
   deleteRealty,
   getRealtors,
+  getAllUsers,
   getUserById,
   deleteProspect,
   createReview,
   getReviewsByRealtorId,
+  getMessagesByUserId,
+  createMessage,
+  deleteMessage,
   closeDB
 };

@@ -1,5 +1,8 @@
 const API_URL = '';
 
+// Default property image URL - global constant
+window.DEFAULT_PROPERTY_IMAGE = 'https://thevanrealty.com/wp-content/uploads/2017/04/2-1.jpg';
+
 // Hardcoded realtor images used as fallbacks across pages (can be updated centrally)
 window.REALTOR_IMAGES = window.REALTOR_IMAGES || [
   'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
@@ -192,7 +195,6 @@ async function loadRealties() {
             <p class="realty-address">📍 ${r.address}</p>
             <p class="realty-price">${r.price || 'Contact for price'}</p>
             <p class="realty-desc">${r.description}</p>
-            ${r.amenities ? `<p class="realty-desc"><strong>Amenities:</strong> ${r.amenities}</p>` : ''}
             <button class="realty-bid mt-auto" onclick="viewRealtyDetails(${r.id})">View Details</button>
           </div>
         </div>
@@ -454,6 +456,27 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMyRealties();
   }
 
+  if (window.location.pathname === '/realtor-messages') {
+    // Load messages for realtor messages page
+    loadMessages();
+  }
+
+  // Utility function to process amenities (adds default tag if < 5)
+  function processAmenities(amenitiesString) {
+    if (!amenitiesString) return ['Free Consultation'];
+    
+    let amenities = amenitiesString.split(',').map(a => a.trim()).filter(a => a.length > 0);
+    // Filter out property info (bedroom, bathroom, size) - these are handled separately
+    amenities = amenities.filter(a => !a.match(/^\d+\s*(Bedroom|Bathroom|Square Meter)/i));
+    
+    // Add default tag if less than 5 amenities
+    if (amenities.length < 5) {
+      amenities.push('Free Consultation');
+    }
+    
+    return amenities;
+  }
+
   // Realtor CRUD functions
   async function loadMyRealties(limit) {
     const tableBody = document.getElementById('realtiesTable');
@@ -537,11 +560,13 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = reviews.map(r => {
           const stars = '⭐'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
           const createdAt = new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          const reviewText = (r.review || '').substring(0, 50);
+          const ellipsis = (r.review && r.review.length > 50) ? '...' : '';
           return `
             <tr>
               <td>${r.buyer_name || 'Anonymous'}</td>
               <td><span class="badge bg-primary">${r.rating}/5</span></td>
-              <td>${r.review.substring(0, 50)}...</td>
+              <td>${reviewText}${ellipsis}</td>
               <td>${createdAt}</td>
             </tr>
           `;
@@ -567,3 +592,106 @@ document.addEventListener('DOMContentLoaded', () => {
       loadRealtorsList(5);
   }
 });
+
+    async function loadMessages(limit) {
+      const tableBody = document.getElementById('messagesTable');
+      if (!tableBody) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/messages`, {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+
+        if (!response.ok) {
+          tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load messages</td></tr>';
+          return;
+        }
+
+        let messages = await response.json();
+        if (!messages || messages.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No messages yet</td></tr>';
+          return;
+        }
+
+        // If a limit is provided, only show that many rows
+        if (limit && Number(limit) > 0) {
+          messages = messages.slice(0, Number(limit));
+        }
+
+        tableBody.innerHTML = messages.map(m => {
+          const createdAt = new Date(m.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          const escapedContent = (m.content || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+          return `
+            <tr>
+              <td>${m.sender_fullname || 'Unknown'}</td>
+              <td>${m.title}</td>
+              <td>${m.content.substring(0, 60)}...</td>
+              <td>${createdAt}</td>
+              <td>
+                <button class="btn-action" onclick="viewMessage('${m.title}', '${escapedContent}')">View</button>
+                <button class="btn-action" onclick="deleteMessage(${m.message_id})">Delete</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Error loading messages:', error);
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading messages</td></tr>';
+      }
+    }
+
+    async function deleteMessage(messageId) {
+      if (!confirm('Are you sure you want to delete this message?')) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/messages/${messageId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+
+        if (response.ok) {
+          loadMessages();
+        } else {
+          alert('Failed to delete message');
+        }
+      } catch (error) {
+        console.error('Error deleting message:', error);
+        alert('Error deleting message');
+      }
+    }
+
+    function viewMessage(title, content) {
+      // Check if modal already exists, if so remove it
+      const existingModal = document.getElementById('messageModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+
+      // Create modal HTML
+      const modalHTML = `
+        <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="messageModalLabel">${title}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <p>${content}</p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Append modal to body
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+      modal.show();
+    }
+

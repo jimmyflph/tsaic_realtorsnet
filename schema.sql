@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS prospects (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Realty/Property table
 CREATE TABLE IF NOT EXISTS realty (
   id SERIAL PRIMARY KEY,
   title VARCHAR(255) UNIQUE NOT NULL,
@@ -33,14 +32,12 @@ CREATE TABLE IF NOT EXISTS realty (
   amenities VARCHAR(500),
   address VARCHAR(255),
   realtor INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Insert demo users
 INSERT INTO users (username, password, role, fullname, email, phone, address) VALUES
   ('buyer1', 'pass123', 'buyer', 'John Buyer', 'john.buyer@example.com', '555-0001', '123 Main St'),
   ('realtor2', 'pass123', 'realtor', 'Sarah Johnson', 'sarah.johnson@realty.com', '555-0002', '456 Oak Ave'),
-  ('buyer2', 'pass123', 'buyer', 'Jane Smith', 'jane@example.com', '555-0003', '789 Pine Rd'),
   ('buyer3', 'pass123', 'buyer', 'Bob Johnson', 'bob@example.com', '555-0004', '321 Elm St')
 ON CONFLICT (username) DO NOTHING;
 
@@ -57,7 +54,6 @@ INSERT INTO realty (title, description, isrental, price, amenities, address, rea
   ('Suburban Family Home', 'Spacious 4-bedroom house perfect for families with large backyard', false, '650000', 'Garden, Garage, Shed', '456 Oak Ave', 2, CURRENT_TIMESTAMP),
   ('Beachfront Condo', 'Beautiful beachfront property with stunning ocean views', true, '3500/month', 'Beach Access, Balcony', '789 Pine Rd', 2, CURRENT_TIMESTAMP)
 ON CONFLICT (title) DO NOTHING;
-
 -- Reviews table
 DROP TABLE IF EXISTS reviews;
 CREATE TABLE IF NOT EXISTS reviews (

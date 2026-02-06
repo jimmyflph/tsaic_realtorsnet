@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Send a Message</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .form-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .btn-submit {
+      background-color: #222;
+      color: white;
+      border: none;
+      padding: 10px 25px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-submit:hover {
+      background-color: #444;
+      color: white;
+    }
+    .btn-cancel {
+      background-color: transparent;
+      color: #222;
+      border: 1px solid #222;
+      padding: 10px 25px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .btn-cancel:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand" href="/">RealtyAI</a>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarNav"
+        aria-controls="navbarNav"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/realtor-home">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/realtor-messages">Messages</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/realtor-my-reviews">Reviews</a>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link btn btn-link text-light" onclick="logout()">Logout</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <section class="py-5 bg-light" style="min-height: calc(100vh - 56px);">
+    <div class="form-container">
+      <h2 class="mb-4">Send a Message</h2>
+
+      <form id="sendMessageForm">
+        <div class="form-group">
+          <label for="recipientSelect" class="form-label">Recipient</label>
+          <select id="recipientSelect" class="form-select" required>
+            <option value="">Choose a recipient...</option>
+          </select>
+          <small class="text-muted">Select who you want to message</small>
+        </div>
+
+        <div class="form-group">
+          <label for="messageTitle" class="form-label">Subject</label>
+          <input type="text" class="form-control" id="messageTitle" placeholder="Message subject" required />
+        </div>
+
+        <div class="form-group">
+          <label for="messageContent" class="form-label">Message</label>
+          <textarea
+            class="form-control"
+            id="messageContent"
+            rows="6"
+            placeholder="Type your message here..."
+            required
+          ></textarea>
+        </div>
+
+        <div class="d-flex justify-content-start">
+          <button type="submit" class="btn-submit">Send Message</button>
+          <a href="/realtor-messages" class="btn-cancel">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Load recipients when page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadRecipients();
+      
+      // Handle form submission
+      document.getElementById('sendMessageForm').addEventListener('submit', handleSendMessage);
+    });
+
+    async function loadRecipients() {
+      const select = document.getElementById('recipientSelect');
+      try {
+        const response = await fetch(`${API_URL}/api/users`, {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+
+        if (response.ok) {
+          const users = await response.json();
+          // Filter out current user
+          const currentUserId = JSON.parse(localStorage.getItem('user')).id;
+          const filteredUsers = users.filter(u => u.id !== currentUserId);
+
+          filteredUsers.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.fullname || user.email;
+            select.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading recipients:', error);
+      }
+    }
+
+    async function handleSendMessage(e) {
+      e.preventDefault();
+
+      const recipientId = parseInt(document.getElementById('recipientSelect').value);
+      const title = document.getElementById('messageTitle').value;
+      const content = document.getElementById('messageContent').value;
+
+      if (!recipientId || !title || !content) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({
+            messageTo: recipientId,
+            title: title,
+            content: content
+          })
+        });
+
+        if (response.ok) {
+          alert('Message sent successfully!');
+          window.location.href = '/realtor-messages';
+        } else {
+          alert('Failed to send message');
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Error sending message');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -126,6 +126,8 @@ async function handleRequest(req, res) {
   }
 
   if (pathname === '/api/chat' && req.method === 'POST') {
+    console.log("chat api called");
+    console.log("chat api called");
     const token = req.headers.authorization?.replace('Bearer ', '');
     const user = auth.verifyToken(token);
 
@@ -140,7 +142,8 @@ async function handleRequest(req, res) {
     req.on('end', async () => {
       try {
         const { message } = JSON.parse(body);
-        
+        console.log("chat message received:", message);
+        console.log("chat message received:", message);
         if (!message) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Message is required' }));
@@ -150,7 +153,9 @@ async function handleRequest(req, res) {
         // Query the external RAG API
         const encodedMessage = encodeURIComponent(message);
         const apiUrl = `https://realtorsnet-rag.onrender.com/api?qstn=${encodedMessage}`;
-        
+        console.log("Querying RAG API:", apiUrl);
+        console.log("Querying RAG API:", apiUrl);
+
         try {
           const https = require('https');
           https.get(apiUrl, (response) => {
@@ -717,6 +722,113 @@ async function handleRequest(req, res) {
         res.end(JSON.stringify(reviews));
       } catch (error) {
         console.error('Error fetching my reviews:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+      return;
+    }
+
+    // API: get messages for logged-in user
+    if (pathname === '/api/messages' && req.method === 'GET') {
+      try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        const user = auth.verifyToken(token);
+
+        if (!user) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized' }));
+          return;
+        }
+
+        // Get messages for the logged-in user
+        const messages = await db2.getMessagesByUserId(user.id);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(messages));
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+      return;
+    }
+
+    // API: create a new message
+    if (pathname === '/api/messages' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const token = req.headers.authorization?.replace('Bearer ', '');
+          const user = auth.verifyToken(token);
+
+          if (!user) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+          }
+
+          const { messageTo, title, content } = JSON.parse(body);
+          const message = await db2.createMessage(user.id, messageTo, title, content);
+
+          res.writeHead(201, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(message));
+        } catch (error) {
+          console.error('Error creating message:', error);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Server error' }));
+        }
+      });
+      return;
+    }
+
+    // API: delete a message
+    const deleteMessageMatch = pathname.match(/^\/api\/messages\/(\d+)$/);
+    if (deleteMessageMatch && req.method === 'DELETE') {
+      try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        const user = auth.verifyToken(token);
+
+        if (!user) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized' }));
+          return;
+        }
+
+        const messageId = deleteMessageMatch[1];
+        const result = await db2.deleteMessage(messageId);
+
+        if (result) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ message: 'Message deleted' }));
+        } else {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Message not found' }));
+        }
+      } catch (error) {
+        console.error('Error deleting message:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Server error' }));
+      }
+      return;
+    }
+
+    // API: get all users (for message recipients)
+    if (pathname === '/api/users' && req.method === 'GET') {
+      try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        const user = auth.verifyToken(token);
+
+        if (!user) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized' }));
+          return;
+        }
+
+        const users = await db2.getAllUsers(100);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(users));
+      } catch (error) {
+        console.error('Error fetching users:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Server error' }));
       }

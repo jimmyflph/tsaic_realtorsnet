@@ -399,14 +399,14 @@
         <div class="property-details">
           
           <!-- Property Image (main banner) -->
-          <img id="propertyMainImage" src="https://via.placeholder.com/900x400?text=Loading+image" 
+          <img id="propertyMainImage" src="https://thevanrealty.com/wp-content/uploads/2017/04/2-1.jpg" 
             alt="Property" class="property-image">
           
           <!-- Property Title & Price -->
           <div>
-            <h1 class="property-title">Modern Home in Downtown</h1>
-            <p class="property-address">📍 123 Main Street, San Francisco, CA 94102</p>
-            <div class="property-price">$2,450,000</div>
+            <h1 class="property-title" id="propertyTitle">Modern Home in Downtown</h1>
+            <p class="property-address" id="propertyAddress">📍 123 Main Street, San Francisco, CA 94102</p>
+            <div class="property-price" id="propertyPrice">$2,450,000</div>
           </div>
 
           <!-- Property Info Grid -->
@@ -426,18 +426,13 @@
           </div>
 
           <!-- Description -->
-          <p class="property-description">
-            Beautiful modern home featuring premium finishes, hardwood floors, and an open-concept living area. 
-            This stunning property includes a chef's kitchen, master suite with spa bathroom, and a spacious backyard 
-            perfect for entertaining. Located in a prime neighborhood with excellent schools and walkable to shops and restaurants.
+          <p class="property-description" id="propertyDescription">
+            Loading...
           </p>
 
           <!-- Features -->
-          <div class="property-features">
-            <span class="feature-tag">✓ New Listing</span>
-            <span class="feature-tag">✓ Open House</span>
-            <span class="feature-tag">✓ Virtual Tour</span>
-            <span class="feature-tag">✓ Financing Available</span>
+          <div class="property-features" id="propertyFeatures">
+            <span class="feature-tag">Loading amenities...</span>
           </div>
 
           <!-- Action Buttons -->
@@ -455,7 +450,7 @@
       <!-- CHAT CONTAINER (1/4 width) -->
       <div class="col-lg-4">
         <!-- Realtor info will be injected here -->
-        <div id="realtorInfo" style="border-color: #fff;">
+        <div id="realtorInfo" style="border: 0 !important; padding: 0; margin: 0;">
           <div class="realtor-card"  style="border-width:0px!important;">
             <h6 class="fw-semibold">Agent to Contact</h6>
             <p class="text-muted">Agent information loading...</p>
@@ -556,5 +551,138 @@
 </div>
 
 <script src="/app.js"></script>
+<script>
+  // Define processAmenities locally to ensure it's available
+  function processAmenities(amenitiesString) {
+    if (!amenitiesString) return ['Free Consultation'];
+    
+    let amenities = amenitiesString.split(',').map(a => a.trim()).filter(a => a.length > 0);
+    // Filter out property info (bedroom, bathroom, size) - these are handled separately
+    amenities = amenities.filter(a => !a.match(/^\d+\s*(Bedroom|Bathroom|Square Meter)/i));
+    
+    // Add default tag if less than 5 amenities
+    if (amenities.length < 5) {
+      amenities.push('Free Consultation');
+    }
+    
+    return amenities;
+  }
+
+  // Load property details dynamically based on URL
+  async function loadPropertyDetails() {
+    const urlParts = window.location.pathname.split('/');
+    const propertyId = urlParts[urlParts.length - 1];
+
+    if (!propertyId || isNaN(propertyId)) {
+      console.error('Invalid property ID');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/realty/${propertyId}`);
+      if (!response.ok) {
+        console.error('Failed to load property');
+        return;
+      }
+
+      const property = await response.json();
+
+      // Update property details
+      document.getElementById('propertyTitle').textContent = property.title || 'Property';
+      document.getElementById('propertyAddress').textContent = `📍 ${property.address || 'Address not available'}`;
+      document.getElementById('propertyPrice').textContent = property.price ? `$${property.price.toLocaleString()}` : 'Contact for price';
+      document.getElementById('propertyDescription').textContent = property.description || 'No description available';
+
+      // Update property main image
+      const DEFAULT_IMG = 'https://thevanrealty.com/wp-content/uploads/2017/04/2-1.jpg';
+      if (property.images) {
+        const images = Array.isArray(property.images) ? property.images : property.images.split(',').map(img => img.trim());
+        if (images.length > 0 && images[0] && images[0].trim()) {
+          document.getElementById('propertyMainImage').src = images[0];
+        } else {
+          document.getElementById('propertyMainImage').src = DEFAULT_IMG;
+        }
+      } else {
+        document.getElementById('propertyMainImage').src = DEFAULT_IMG;
+      }
+
+      // Extract property info from amenities and populate property-info grid
+      const propertyInfoGrid = document.querySelector('.property-info');
+      if (property.amenities && propertyInfoGrid) {
+        const amenitiesList = property.amenities.split(',').map(a => a.trim());
+        const bedroomMatch = amenitiesList.find(a => a.match(/^\d+\s*Bedroom/i));
+        const bathroomMatch = amenitiesList.find(a => a.match(/^\d+\s*Bathroom/i));
+        const sizeMatch = amenitiesList.find(a => a.match(/^\d+\s*Square Meter/i));
+        
+        if (bedroomMatch && propertyInfoGrid.children[0]) {
+          const bedroomValue = bedroomMatch.match(/\d+/)[0];
+          propertyInfoGrid.children[0].querySelector('.info-value').textContent = bedroomValue;
+        }
+        if (bathroomMatch && propertyInfoGrid.children[1]) {
+          const bathroomValue = bathroomMatch.match(/\d+/)[0];
+          propertyInfoGrid.children[1].querySelector('.info-value').textContent = bathroomValue;
+        }
+        if (sizeMatch && propertyInfoGrid.children[2]) {
+          const sizeValue = parseInt(sizeMatch.match(/\d+/)[0]).toLocaleString();
+          propertyInfoGrid.children[2].querySelector('.info-value').textContent = sizeValue;
+        }
+      }
+
+      // Update realtor info section
+      const realtorInfoDiv = document.getElementById('realtorInfo');
+      if (realtorInfoDiv && property.realtor_fullname) {
+        // Get realtor image with fallback to REALTOR_IMAGES
+        const fallbackImg = (window.REALTOR_IMAGES && window.REALTOR_IMAGES.length) ? window.REALTOR_IMAGES[(property.realtor || 0) % window.REALTOR_IMAGES.length] : 'https://via.placeholder.com/120?text=Agent';
+        const realtorImg = property.realtor_image || property.realtor_photo || fallbackImg;
+        
+        realtorInfoDiv.innerHTML = `
+          <div style="background: white; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); padding: 20px; border: 0 !important;">
+            <h6 style="margin-bottom: 15px; font-weight: 600;">Agent to Contact</h6>
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <img src="${realtorImg}" alt="agent" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.1); flex-shrink: 0;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 1rem;">${property.realtor_fullname}</div>
+                <div style="color: #666; font-size: 0.9rem; margin-top: 4px;">
+                  <a href="mailto:${property.realtor_email}" style="color: #667eea; text-decoration: none;">${property.realtor_email}</a>
+                </div>
+                <div style="margin-top: 12px; display: flex; gap: 8px;">
+                  <a href="/realtor-view/${property.realtor}" style="flex: 1; padding: 8px 12px; background: #f0f1ff; color: #667eea; text-decoration: none; border-radius: 6px; text-align: center; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer;">View Profile</a>
+                  <a href="mailto:${property.realtor_email}" style="flex: 1; padding: 8px 12px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; text-align: center; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer;">Contact</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Update property features from amenities using utility function
+      const amenitiesContainer = document.getElementById('propertyFeatures');
+      if (amenitiesContainer && property.amenities) {
+        try {
+          const amenities = processAmenities(property.amenities);
+
+          console.log('Processed amenities:', amenities);
+          amenitiesContainer.innerHTML = amenities.map(amenity => 
+            `<span class="feature-tag">✓ ${amenity}</span>`
+          ).join('');
+        } catch (err) {
+          console.error('Error processing amenities:', err);
+          amenitiesContainer.innerHTML = '<span class="feature-tag">✓ Free Consultation</span>';
+        }
+      } else if (amenitiesContainer) {
+        amenitiesContainer.innerHTML = '<span class="feature-tag">✓ Free Consultation</span>';
+      }
+    } catch (error) {
+      console.error('Error loading property details:', error);
+    }
+  }
+
+  // Load property details when page loads
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadPropertyDetails);
+  } else {
+    loadPropertyDetails();
+  }
+</script>
 </body>
 </html>

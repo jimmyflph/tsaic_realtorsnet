@@ -53,7 +53,8 @@
 <nav class="navbar navbar-expand-lg">
   <div class="container">
     <a class="navbar-brand fw-bold" href="/">AI Realty</a>
-    <div class="ms-auto">
+    <div class="ms-auto d-flex align-items-center" style="gap:8px;">
+      <a href="/realtor-messages" class="btn btn-outline-primary btn-sm">Messages</a>
       <button id="logoutBtn" class="btn btn-outline-dark btn-sm">Logout</button>
     </div>
   </div>
@@ -95,6 +96,21 @@
             <option value="false">Sale</option>
             <option value="true">Rental</option>
           </select>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-2">
+        <div class="col-md-4">
+          <label class="form-label">No. Of Bedrooms <span style="color:red;">*</span></label>
+          <input id="bedrooms" type="number" class="form-control" min="1" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">No. Of Bathrooms <span style="color:red;">*</span></label>
+          <input id="bathrooms" type="number" class="form-control" min="1" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Property Size (Square Meter) <span style="color:red;">*</span></label>
+          <input id="propertySize" type="number" class="form-control" min="1" required>
         </div>
       </div>
 
@@ -146,6 +162,16 @@
           addrEl.value = r.address || '';
           priceEl.value = r.price || '';
           amenEl.value = r.amenities || '';
+          // Extract and populate bedroom, bathroom, size from amenities if present
+          const amenitiesList = (r.amenities || '').split(',').map(a => a.trim());
+          const bedroomMatch = amenitiesList.find(a => a.match(/^\d+\s*Bedroom/i));
+          const bathroomMatch = amenitiesList.find(a => a.match(/^\d+\s*Bathroom/i));
+          const sizeMatch = amenitiesList.find(a => a.match(/^\d+\s*Square Meter/i));
+          
+          if (bedroomMatch) document.getElementById('bedrooms').value = bedroomMatch.match(/\d+/)[0];
+          if (bathroomMatch) document.getElementById('bathrooms').value = bathroomMatch.match(/\d+/)[0];
+          if (sizeMatch) document.getElementById('propertySize').value = sizeMatch.match(/\d+/)[0];
+          
           isrEl.value = r.isrental ? 'true' : 'false';
           if (r.images) {
             if (Array.isArray(r.images)) imagesEl.value = r.images.join('\n');
@@ -180,14 +206,30 @@
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = getIdFromPath();
+        const bedrooms = document.getElementById('bedrooms').value.trim();
+        const bathrooms = document.getElementById('bathrooms').value.trim();
+        const propertySize = document.getElementById('propertySize').value.trim();
+        const userAmenities = amenEl.value.trim();
+        
+        // Combine property info with amenities
+        const amenitiesArray = [
+          `${bedrooms} Bedrooms`,
+          `${bathrooms} Bathrooms`,
+          `${propertySize} Square Meter`,
+          userAmenities
+        ].filter(a => a && a !== 'undefined').join(', ');
+        
         const payload = {
           title: titleEl.value.trim(),
           description: descEl.value.trim(),
           isrental: isrEl.value === 'true',
           price: priceEl.value.trim(),
-          amenities: amenEl.value.trim(),
+          amenities: amenitiesArray,
           address: addrEl.value.trim(),
-          images: imagesEl.value.split('\n').map(s=>s.trim()).filter(Boolean)
+          images: imagesEl.value.split('\n').map(s=>s.trim()).filter(Boolean),
+          bedrooms: parseInt(bedrooms),
+          bathrooms: parseInt(bathrooms),
+          propertySize: parseInt(propertySize)
         };
 
         try {
